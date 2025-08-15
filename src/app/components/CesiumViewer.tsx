@@ -9,6 +9,7 @@ import {
 	Terrain,
 	Viewer,
 	type Viewer as ViewerType,
+	SkyBox,
 } from "cesium";
 
 // Cesium widgets CSS is linked globally in app/layout.tsx from /public/cesium
@@ -35,8 +36,21 @@ export default function CesiumViewer() {
 
 		const viewer = new Viewer(containerRef.current, {
 			terrain: Terrain.fromWorldTerrain(),
+			skyBox: new SkyBox({
+				sources: {
+					positiveX: "space/skybox/px.png",
+					negativeX: "space/skybox/nx.png",
+					positiveY: "space/skybox/ny.png",
+					negativeY: "space/skybox/py.png",
+					positiveZ: "space/skybox/pz.png",
+					negativeZ: "space/skybox/nz.png",
+				}
+			})
 		});
 		viewerRef.current = viewer;
+
+		// Remove the sun and its lighting effects
+		if (viewer.scene.sun) viewer.scene.sun.show = false;
 
 		(async () => {
 			// Fly the camera to San Francisco
