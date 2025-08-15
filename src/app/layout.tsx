@@ -24,6 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Cesium Widgets CSS served from /public/cesium after asset copy */}
+        <link rel="stylesheet" href="/cesium/Widgets/widgets.css" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
