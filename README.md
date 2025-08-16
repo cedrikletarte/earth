@@ -42,3 +42,16 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.
 
 ---
+
+## 📚 References
+
+### Skybox & Space Assets
+- **Space 3D Generator**: [https://tools.wwwtyro.net/space-3d/index.html#animationSpeed=1&fov=90&nebulae=true&pointStars=true&resolution=4096&seed=42nvdhqlhg00&stars=true&sun=true](https://tools.wwwtyro.net/space-3d/index.html#animationSpeed=1&fov=90&nebulae=true&pointStars=true&resolution=4096&seed=42nvdhqlhg00&stars=true&sun=true)
+- **Panorama to Cubemap Converter**: [https://jaxry.github.io/panorama-to-cubemap/](https://jaxry.github.io/panorama-to-cubemap/)
+- **NASA Scientific Visualization Studio**: [https://svs.gsfc.nasa.gov/4851](https://svs.gsfc.nasa.gov/4851)
+
+### Map Data
+- **MapTiler Planet Data**: [https://data.maptiler.com/downloads/planet/](https://data.maptiler.com/downloads/planet/)
+- **Geofabrik OSM files** : [https://download.geofabrik.de/](https://download.geofabrik.de/)
+
+---
