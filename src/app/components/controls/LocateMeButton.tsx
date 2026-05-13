@@ -34,15 +34,12 @@ export default function LocateMeButton({ viewer }: Props) {
   const goToMyLocation = () => {
     if (!viewer) return;
     if (!navigator.geolocation) {
-      console.warn("Geolocation non disponible dans ce navigateur / contexte.");
-      console.warn("Geolocation not available in this browser");
       setErrorMsg("The geolocation is not available in this browser.");
       return;
     }
     if (!(window as any).isSecureContext) {
       // Most browsers require HTTPS (or localhost) for geolocation
       setErrorMsg("Geolocation requires a secure origin (HTTPS).");
-      console.warn("Geolocation requires a secure origin (HTTPS).");
       return;
     }
     // If Permissions API is available, surface denied early with guidance

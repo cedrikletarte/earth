@@ -87,7 +87,7 @@ function MiniViewer({
       try {
         mini.imageryLayers.removeAll();
         mini.imageryLayers.addImageryProvider(createProvider());
-      } catch (e) {
+      } catch {
         // ignore
       }
 
@@ -316,17 +316,14 @@ export default function MapStyleSwitcher({
   // Update shared right offset when drawer opens/closes
   useEffect(() => {
     setRightOffset(open ? 300 : 0);
-    try {
-      onOpenChange?.(open);
-    } catch {}
-    // Clean up on unmount to reset offset
+    onOpenChange?.(open);
     return () => setRightOffset(0);
   }, [open, setRightOffset]);
 
   return (
     <>
       {/* Floating layers button (center-right) */}
-      <Tooltip title={"layers"} placement="left">
+      <Tooltip title="Layers" placement="left">
         <Box
           sx={{
             position: "fixed",

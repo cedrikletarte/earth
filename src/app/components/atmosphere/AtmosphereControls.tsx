@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { SceneMode } from "cesium";
 import type { AtmosphereViewModel } from "./types";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -40,7 +41,7 @@ export default function AtmosphereControls({
 
     const checkSceneMode = () => {
       const sceneMode = viewer.scene.mode;
-      setIs3DMode(sceneMode === 3); // SceneMode.SCENE3D = 3
+      setIs3DMode(sceneMode === SceneMode.SCENE3D);
     };
 
     // Check initially
@@ -108,7 +109,7 @@ export default function AtmosphereControls({
         <Checkbox
           checked={checked}
           disabled={!is3DMode && property !== "enableTerrain"}
-          onChange={(e) => onUpdateParameter(property, e.target.checked as any)}
+          onChange={(e) => onUpdateParameter(property, e.target.checked as AtmosphereViewModel[keyof AtmosphereViewModel])}
           size="small"
         />
       }
@@ -165,8 +166,7 @@ export default function AtmosphereControls({
             setLocalValue(newValue as number);
           }}
           onChangeCommitted={(_, newValue) => {
-            // Update parent state when sliding is complete
-            onUpdateParameter(property, newValue as any);
+            onUpdateParameter(property, newValue as AtmosphereViewModel[keyof AtmosphereViewModel]);
           }}
           size="small"
           sx={{

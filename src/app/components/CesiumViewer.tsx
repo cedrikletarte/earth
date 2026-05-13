@@ -31,6 +31,13 @@ import RightControls from "./controls/RightControls";
 
 // Cesium widgets CSS is linked globally in app/layout.tsx from /public/cesium
 
+const tileProvider = (style: string) =>
+  new UrlTemplateImageryProvider({
+    url: `${process.env.NEXT_PUBLIC_TILESERVER_URL}/styles/${style}/{z}/{x}/{y}.png`,
+    maximumLevel: 18,
+    tilingScheme: new WebMercatorTilingScheme(),
+  });
+
 export default function CesiumViewer() {
   // Viewer container reference
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -68,66 +75,12 @@ export default function CesiumViewer() {
 
   // Define available styles
   const styles: MapStyle[] = [
-    {
-      key: "osm-liberty",
-      name: "OSM Liberty",
-      createProvider: () =>
-        new UrlTemplateImageryProvider({
-          url: process.env.NEXT_PUBLIC_IMAGERY_URL_OSM_LIBERTY!,
-          maximumLevel: 18,
-          tilingScheme: new WebMercatorTilingScheme(),
-        }),
-    },
-    {
-      key: "osm-standard",
-      name: "OSM Standard",
-      createProvider: () =>
-        new UrlTemplateImageryProvider({
-          url: process.env.NEXT_PUBLIC_IMAGERY_URL_OSM_STANDARD!,
-          maximumLevel: 18,
-          tilingScheme: new WebMercatorTilingScheme(),
-        }),
-    },
-    {
-      key: "osm_bright",
-      name: "OSM Bright",
-      createProvider: () =>
-        new UrlTemplateImageryProvider({
-          url: process.env.NEXT_PUBLIC_IMAGERY_URL_OSM_BRIGHT!,
-          maximumLevel: 18,
-          tilingScheme: new WebMercatorTilingScheme(),
-        }),
-    },
-    {
-      key: "klokantech_basic",
-      name: "Klokantech Basic",
-      createProvider: () =>
-        new UrlTemplateImageryProvider({
-          url: process.env.NEXT_PUBLIC_IMAGERY_URL_KLOKANTECH_BASIC!,
-          maximumLevel: 18,
-          tilingScheme: new WebMercatorTilingScheme(),
-        }),
-    },
-    {
-      key: "aws-standard",
-      name: "AWS Standard",
-      createProvider: () =>
-        new UrlTemplateImageryProvider({
-          url: process.env.NEXT_PUBLIC_IMAGERY_URL_AWS_STANDARD!,
-          maximumLevel: 18,
-          tilingScheme: new WebMercatorTilingScheme(),
-        }),
-    },
-    {
-      key: "aws-hybrid",
-      name: "AWS Hybrid",
-      createProvider: () =>
-        new UrlTemplateImageryProvider({
-          url: process.env.NEXT_PUBLIC_IMAGERY_URL_AWS_HYBRID!,
-          maximumLevel: 18,
-          tilingScheme: new WebMercatorTilingScheme(),
-        }),
-    },
+    { key: "osm-liberty",      name: "OSM Liberty",      createProvider: () => tileProvider("osm-liberty") },
+    { key: "osm-standard",     name: "OSM Standard",     createProvider: () => tileProvider("osm-standard") },
+    { key: "osm-bright",       name: "OSM Bright",       createProvider: () => tileProvider("osm-bright") },
+    { key: "klokantech-basic", name: "Klokantech Basic", createProvider: () => tileProvider("klokantech-basic") },
+    { key: "aws-standard",     name: "AWS Standard",     createProvider: () => tileProvider("aws-standard") },
+    { key: "aws-hybrid",       name: "AWS Hybrid",       createProvider: () => tileProvider("aws-hybrid") },
   ];
 
   useEffect(() => {
@@ -289,17 +242,6 @@ export default function CesiumViewer() {
           console.warn("Could not load terrain provider:", error);
         }
       }
-
-      // Fly the camera to San Francisco
-      /*
-			viewer.camera.flyTo({
-				destination: Cartesian3.fromDegrees(-122.4175, 37.655, 400),
-				orientation: {
-					heading: CesiumMath.toRadians(0.0),
-					pitch: CesiumMath.toRadians(-15.0),
-				},
-			});
-			*/
 
       // Add Cesium OSM Buildings layer (only in 3D mode initially)
       if (viewer.scene.mode === SceneMode.SCENE3D) {
@@ -471,8 +413,6 @@ export default function CesiumViewer() {
         } catch (e) {
           console.warn("Failed to fetch boundary via details API:", e);
         }
-      } else {
-        // Nothing to render
       }
     },
   [setInfoOpen, setSelectedPlaceLabel]
@@ -517,10 +457,10 @@ export default function CesiumViewer() {
         open={infoOpen}
         onClose={() => setInfoOpen(false)}
         placeLabel={selectedPlaceLabel}
-  lon={selectedPlaceMeta?.lon}
-  lat={selectedPlaceMeta?.lat}
-  wikidataId={selectedPlaceMeta?.wikidataId}
-  wikipediaTag={selectedPlaceMeta?.wikipediaTag}
+        lon={selectedPlaceMeta?.lon}
+        lat={selectedPlaceMeta?.lat}
+        wikidataId={selectedPlaceMeta?.wikidataId}
+        wikipediaTag={selectedPlaceMeta?.wikipediaTag}
       />
     </>
   );

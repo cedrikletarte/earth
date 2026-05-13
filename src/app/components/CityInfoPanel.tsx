@@ -29,6 +29,26 @@ type WikiSummary = {
   content_urls?: { desktop?: { page?: string } };
 };
 
+const PROVINCES = new Set([
+  "Québec",
+  "Quebec",
+  "Ontario",
+  "British Columbia",
+  "Alberta",
+  "Manitoba",
+  "Saskatchewan",
+  "New Brunswick",
+  "Nova Scotia",
+  "Prince Edward Island",
+  "Newfoundland and Labrador",
+  "Yukon",
+  "Nunavut",
+  "Northwest Territories",
+  "Canada",
+  "United States",
+  "USA",
+]);
+
 export default function CityInfoPanel({
   open,
   onClose,
@@ -52,28 +72,6 @@ export default function CityInfoPanel({
     // Drop tokens that look like postal codes or contain digits
     const tokens = rawTokens.filter((t) => !/[0-9]/.test(t));
 
-    const provinces = new Set([
-      // Canadian provinces/territories
-      "Québec",
-      "Quebec",
-      "Ontario",
-      "British Columbia",
-      "Alberta",
-      "Manitoba",
-      "Saskatchewan",
-      "New Brunswick",
-      "Nova Scotia",
-      "Prince Edward Island",
-      "Newfoundland and Labrador",
-      "Yukon",
-      "Nunavut",
-      "Northwest Territories",
-      // Common country fallback
-      "Canada",
-      "United States",
-      "USA",
-    ]);
-
     const out: string[] = [];
     const push = (s?: string) => {
       if (!s) return;
@@ -84,7 +82,7 @@ export default function CityInfoPanel({
 
     const t0 = tokens[0];
     const t1 = tokens[1];
-    const provinceToken = tokens.find((t) => provinces.has(t));
+    const provinceToken = tokens.find((t) => PROVINCES.has(t));
     const countryToken = tokens.find((t) =>
       /Canada|United States|USA/i.test(t)
     );
@@ -133,8 +131,6 @@ export default function CityInfoPanel({
         ].filter(Boolean) as string[])
       );
 
-      console.log(langs)
-
       const fetchRestSummary = async (lang: string, title: string) => {
         const url = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
           title
@@ -162,7 +158,6 @@ export default function CityInfoPanel({
           const wdUrl = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${encodeURIComponent(
             wikidataId
           )}&props=sitelinks|labels&format=json&origin=*`;
-          console.log(wdUrl)
           const wdRes = await fetch(wdUrl);
           if (wdRes.ok) {
             const wd = (await wdRes.json()) as any;
@@ -303,7 +298,6 @@ export default function CityInfoPanel({
 
       // Fallback: use action API with search generator to get first page with thumb+extract
       try {
-        const langs2 = langs;
         // Build flexible search terms: candidates + tokens from label + disambig title hint
         const label = (placeLabel || "").trim();
         const tokens = label
@@ -320,23 +314,7 @@ export default function CityInfoPanel({
           )
         );
 
-        const provinces = [
-          "Québec",
-          "Quebec",
-          "Ontario",
-          "British Columbia",
-          "Alberta",
-          "Manitoba",
-          "Saskatchewan",
-          "New Brunswick",
-          "Nova Scotia",
-          "Prince Edward Island",
-          "Newfoundland and Labrador",
-          "Yukon",
-          "Nunavut",
-          "Northwest Territories",
-        ];
-        const provinceToken = tokens.find((t) => provinces.includes(t));
+        const provinceToken = tokens.find((t) => PROVINCES.has(t));
         const countryToken = tokens.find((t) =>
           /Canada|United States|USA/i.test(t)
         );
@@ -368,7 +346,7 @@ export default function CityInfoPanel({
           return s;
         };
 
-  for (const lang of langs2) {
+        for (const lang of langs) {
           for (const term of searchTerms) {
             const url = `https://${lang}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
               term
@@ -407,11 +385,11 @@ export default function CityInfoPanel({
           }
         }
         if (!cancelled) {
-          setError("Aucun résumé trouvé pour cette ville.");
+          setError("No summary found for this city.");
           setLoading(false);
         }
-      } catch (e) {
-        if (!cancelled) setError("Erreur lors de la récupération du résumé.");
+      } catch {
+        if (!cancelled) setError("Error retrieving summary.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -427,7 +405,7 @@ export default function CityInfoPanel({
     <Dialog
       open={open}
       onClose={(_, reason) => {
-        if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+        if (reason === "backdropClick") return;
         onClose();
       }}
       disableEscapeKeyDown
@@ -464,9 +442,9 @@ export default function CityInfoPanel({
       >
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
           <Typography variant="h6" sx={{ flex: 1 }} noWrap>
-            {data?.title || placeLabel || "Détails"}
+            {data?.title || placeLabel || "Details"}
           </Typography>
-          <IconButton aria-label="Fermer" onClick={onClose}>
+          <IconButton aria-label="Close" onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </Stack>

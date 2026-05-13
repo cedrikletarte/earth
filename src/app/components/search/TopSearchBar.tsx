@@ -117,12 +117,10 @@ export default function TopSearchBar({
     setShowResults(true);
 
     try {
-      const base =
-        process.env
-          .NEXT_PUBLIC_NOMINATIM_BASE_URL; /*|| "https://nominatim.openstreetmap.org"*/
-  const url = `${base}/search?format=json&limit=8&q=${encodeURIComponent(
+      const base = process.env.NEXT_PUBLIC_NOMINATIM_BASE_URL;
+      const url = `${base}/search?format=json&limit=8&q=${encodeURIComponent(
         searchQuery
-  )}&addressdetails=1&polygon_geojson=1&extratags=1`;
+      )}&addressdetails=1&polygon_geojson=1&extratags=1`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -167,11 +165,11 @@ export default function TopSearchBar({
       onSelectPlace(item.label, {
         geometry: item.geojson,
         osmType: item.osm_type,
-  osmId: item.osm_id,
-  lon: item.lon,
-  lat: item.lat,
-  wikidataId: item.wikidata,
-  wikipediaTag: item.wikipedia,
+        osmId: item.osm_id,
+        lon: item.lon,
+        lat: item.lat,
+        wikidataId: item.wikidata,
+        wikipediaTag: item.wikipedia,
       });
     }
 
@@ -358,7 +356,6 @@ export default function TopSearchBar({
             {/* History */}
             {!query && history.length > 0 && (
               <>
-                {query && results.length > 0 && <Divider />}
                 <Box
                   sx={{
                     p: 2,
