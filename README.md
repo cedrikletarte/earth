@@ -2,6 +2,8 @@
 
 A Next.js app using CesiumJS to render an interactive 3D globe with custom map styles, city search, atmospheric controls, and a 6-face skybox.
 
+![Thumbnail](/public/thumbnail.png)
+
 ---
 
 ## 🏁 Getting Started
