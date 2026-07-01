@@ -3,11 +3,11 @@ services:
     build:
       context: .
       args:
-        NEXT_PUBLIC_CESIUM_ION_TOKEN: ${NEXT_PUBLIC_CESIUM_ION_TOKEN}
-        NEXT_PUBLIC_TILESERVER_URL: ${NEXT_PUBLIC_TILESERVER_URL}
-        NEXT_PUBLIC_NOMINATIM_BASE_URL: ${NEXT_PUBLIC_NOMINATIM_BASE_URL}
+        VITE_CESIUM_ION_TOKEN: ${VITE_CESIUM_ION_TOKEN}
+        VITE_TILESERVER_URL: ${VITE_TILESERVER_URL}
+        VITE_NOMINATIM_BASE_URL: ${VITE_NOMINATIM_BASE_URL}
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - tileserver
       - nominatim

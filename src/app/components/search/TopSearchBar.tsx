@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import HistoryIcon from "@mui/icons-material/History";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 
@@ -117,7 +117,7 @@ export default function TopSearchBar({
     setShowResults(true);
 
     try {
-      const base = process.env.NEXT_PUBLIC_NOMINATIM_BASE_URL;
+      const base = import.meta.env.VITE_NOMINATIM_BASE_URL;
       const url = `${base}/search?format=json&limit=8&q=${encodeURIComponent(
         searchQuery
       )}&addressdetails=1&polygon_geojson=1&extratags=1`;
@@ -235,17 +235,19 @@ export default function TopSearchBar({
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon color="action" />
-            </InputAdornment>
-          ),
-          endAdornment: loading ? (
-            <InputAdornment position="end">
-              <CircularProgress size={20} />
-            </InputAdornment>
-          ) : null,
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: loading ? (
+              <InputAdornment position="end">
+                <CircularProgress size={20} />
+              </InputAdornment>
+            ) : null,
+          },
         }}
         sx={{
           "& .MuiOutlinedInput-root": {
@@ -290,7 +292,7 @@ export default function TopSearchBar({
                   <Typography
                     variant="overline"
                     color="textSecondary"
-                    fontWeight="bold"
+                    sx={{ fontWeight: "bold" }}
                   >
                     Search Results
                   </Typography>
@@ -314,8 +316,8 @@ export default function TopSearchBar({
                           primary={
                             <Typography
                               variant="body2"
-                              fontWeight="medium"
                               noWrap
+                              sx={{ fontWeight: "medium" }}
                             >
                               {result.label.split(",")[0]}
                             </Typography>
@@ -368,7 +370,7 @@ export default function TopSearchBar({
                   <Typography
                     variant="overline"
                     color="textSecondary"
-                    fontWeight="bold"
+                    sx={{ fontWeight: "bold" }}
                   >
                     Recent Searches
                   </Typography>
@@ -430,9 +432,9 @@ export default function TopSearchBar({
                           primary={
                             <Typography
                               variant="body2"
-                              fontWeight="medium"
                               noWrap
                               sx={{
+                                fontWeight: "medium",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
                               }}

@@ -83,7 +83,7 @@ export default function AtmosphereControls({
       }}
     >
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography variant="subtitle2" fontWeight="600">
+        <Typography variant="subtitle2" sx={{ fontWeight: "600" }}>
           {title}
         </Typography>
       </AccordionSummary>
