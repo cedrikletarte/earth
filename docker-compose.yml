@@ -45,10 +45,26 @@ services:
     shm_size: 1g
     restart: unless-stopped
 
+  citydb:
+    image: 3dcitydb/3dcitydb-pg:5-alpine
+    container_name: citydb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: montreal3d
+      SRID: 2950
+    ports:
+      - "5440:5432"
+    volumes:
+      - citydb-data:/var/lib/postgresql/data
+
 volumes:
   nominatim-db:
     name: nominatim-db
     external: true
   nominatim-flatnode:
     name: nominatim-flatnode
+    external: true
+  citydb-data:
+    name: citydb-data
     external: true
