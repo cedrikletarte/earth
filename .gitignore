@@ -19,3 +19,11 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# python
+.venv
+
+
+/public/tiles
+/scripts/generate-3d-tiles.sh
+/scripts/import-citygml.sh

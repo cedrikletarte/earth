@@ -40,12 +40,12 @@ export function useCesiumViewer(
       mapProjection: new WebMercatorProjection(),
       skyBox: new SkyBox({
         sources: {
-          positiveX: "space/skybox/px.png",
-          negativeX: "space/skybox/nx.png",
-          positiveY: "space/skybox/ny.png",
-          negativeY: "space/skybox/py.png",
-          positiveZ: "space/skybox/pz.png",
-          negativeZ: "space/skybox/nz.png",
+          positiveX: "/skybox/px.png",
+          negativeX: "/skybox/nx.png",
+          positiveY: "/skybox/ny.png",
+          negativeY: "/skybox/py.png",
+          positiveZ: "/skybox/pz.png",
+          negativeZ: "/skybox/nz.png",
         },
       }),
       sceneMode: SceneMode.SCENE3D,
@@ -54,7 +54,7 @@ export function useCesiumViewer(
     viewerRef.current = v;
     setViewer(v);
 
-    if (v.scene.sun) v.scene.sun.show = false;
+    //if (v.scene.sun) v.scene.sun.show = true;
 
     const clampCamera2D = () => {
       const scene = v.scene;
