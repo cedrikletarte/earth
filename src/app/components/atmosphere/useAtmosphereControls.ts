@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Cartesian3,
-  Terrain,
-  EllipsoidTerrainProvider,
   JulianDate,
   ClockRange,
   SceneMode,
@@ -121,21 +119,10 @@ function applyParameterChange<K extends keyof AtmosphereViewModel>(
 
   // Don't apply atmosphere changes in 2D or Columbus modes
   if (scene.mode !== SceneMode.SCENE3D) {
-    // Only allow certain non-atmospheric parameters in 2D
-    if (key !== "enableTerrain") {
-      return;
-    }
+    return;
   }
 
   switch (key) {
-    case "enableTerrain":
-      if (value) {
-        scene.setTerrain(Terrain.fromWorldTerrain());
-      } else {
-        scene.terrainProvider = new EllipsoidTerrainProvider();
-      }
-      break;
-
     case "enableLighting":
       globe.enableLighting = value as boolean;
       break;

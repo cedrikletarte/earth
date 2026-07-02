@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Ion,
   Viewer,
   type Viewer as ViewerType,
   SkyBox,
@@ -9,8 +8,6 @@ import {
   Math as CesiumMath,
   Cartographic,
   EllipsoidTerrainProvider,
-  createWorldTerrainAsync,
-  createOsmBuildingsAsync,
 } from "cesium";
 
 export function useCesiumViewer(
@@ -20,16 +17,11 @@ export function useCesiumViewer(
   const [viewer, setViewer] = useState<ViewerType | null>(null);
 
   useEffect(() => {
-    const token = import.meta.env.VITE_CESIUM_ION_TOKEN;
-    if (!token) {
-      console.warn("VITE_CESIUM_ION_TOKEN is not set. Add it to your .env file.");
-    } else {
-      Ion.defaultAccessToken = token;
-    }
-
     if (!containerRef.current) return;
 
     const v = new Viewer(containerRef.current, {
+      creditContainer: document.createElement("div"),
+      baseLayer: false,
       baseLayerPicker: false,
       sceneModePicker: false,
       homeButton: false,
@@ -102,30 +94,8 @@ export function useCesiumViewer(
         if (skyAtmosphere) skyAtmosphere.show = true;
         v.scene.fog.enabled = true;
         v.scene.highDynamicRange = true;
-        (async () => {
-          try {
-            v.terrainProvider = await createWorldTerrainAsync();
-            v.scene.primitives.add(await createOsmBuildingsAsync());
-          } catch (error) {
-            console.warn("Could not restore 3D elements:", error);
-          }
-        })();
       }
     });
-
-    (async () => {
-      if (v.scene.mode !== SceneMode.SCENE3D) return;
-      try {
-        v.terrainProvider = await createWorldTerrainAsync();
-      } catch (error) {
-        console.warn("Could not load terrain provider:", error);
-      }
-      try {
-        v.scene.primitives.add(await createOsmBuildingsAsync());
-      } catch (error) {
-        console.warn("Could not load OSM buildings:", error);
-      }
-    })();
 
     return () => {
       try {

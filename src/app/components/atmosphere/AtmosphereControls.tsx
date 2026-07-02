@@ -108,7 +108,7 @@ export default function AtmosphereControls({
       control={
         <Checkbox
           checked={checked}
-          disabled={!is3DMode && property !== "enableTerrain"}
+          disabled={!is3DMode}
           onChange={(e) => onUpdateParameter(property, e.target.checked as AtmosphereViewModel[keyof AtmosphereViewModel])}
           size="small"
         />
@@ -116,14 +116,14 @@ export default function AtmosphereControls({
       label={
         <Typography
           variant="body2"
-          sx={{ opacity: !is3DMode && property !== "enableTerrain" ? 0.5 : 1 }}
+          sx={{ opacity: !is3DMode ? 0.5 : 1 }}
         >
           {label}
         </Typography>
       }
       sx={{
         margin: 0,
-        opacity: !is3DMode && property !== "enableTerrain" ? 0.5 : 1,
+        opacity: !is3DMode ? 0.5 : 1,
       }}
     />
   );
@@ -254,11 +254,6 @@ export default function AtmosphereControls({
         {activeTab === "globe" && (
           <Box>
             <ControlSection title="Basic Settings">
-              <CheckboxControl
-                label="Enable Terrain"
-                property="enableTerrain"
-                checked={viewModel.enableTerrain}
-              />
               <CheckboxControl
                 label="Enable Lighting"
                 property="enableLighting"

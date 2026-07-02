@@ -1,6 +1,5 @@
 export interface AtmosphereViewModel {
   // Globe settings
-  enableTerrain: boolean;
   enableLighting: boolean;
   groundTranslucency: boolean;
 

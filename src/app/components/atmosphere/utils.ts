@@ -61,7 +61,6 @@ export function getAtmosphereDefaults(viewer: ViewerType): AtmosphereDefaults {
 export function createInitialViewModel(defaults: AtmosphereDefaults) {
   return {
     // Globe settings
-    enableTerrain: false,
     enableLighting: true,
     groundTranslucency: false,
 
