@@ -5,6 +5,10 @@
 # Usage: ./scripts/import-citygml.sh [path-to-vm_2020_gml_01_06]
 set -euo pipefail
 
+# Prevent Git Bash (MSYS2) from mangling POSIX-style arguments like "/data"
+# into Windows paths before they reach docker.exe.
+export MSYS_NO_PATHCONV=1
+
 DATA_DIR="${1:-/mnt/sdb1/building/vm_2020_gml_01_06}"
 NETWORK="earth_default"
 DB_HOST="citydb"

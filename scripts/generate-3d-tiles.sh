@@ -6,6 +6,10 @@
 # Usage: ./scripts/generate-3d-tiles.sh [output-dir]
 set -euo pipefail
 
+# Prevent Git Bash (MSYS2) from mangling POSIX-style arguments like "/output"
+# into Windows paths before they reach docker.exe.
+export MSYS_NO_PATHCONV=1
+
 OUTPUT_DIR="${1:-$(pwd)/public/tiles/montreal-buildings}"
 NETWORK="earth_default"
 DB_HOST="citydb"
