@@ -3,6 +3,7 @@ import { Cartesian3, Math as CesiumMath, UrlTemplateImageryProvider, WebMercator
 import { useCesiumViewer } from "./hooks/useCesiumViewer";
 import { useImageryStyle } from "./hooks/useImageryStyle";
 import { useBoundaryOverlay } from "./hooks/useBoundaryOverlay";
+import { useBuildingsTileset } from "./hooks/useBuildingsTileset";
 import { useAtmosphereControls } from "./atmosphere/useAtmosphereControls";
 import TopSearchBar from "./search/TopSearchBar";
 import CityInfoPanel from "./CityInfoPanel";
@@ -31,6 +32,7 @@ export default function CesiumViewer() {
   const { viewer, viewerRef } = useCesiumViewer(containerRef);
   const { selectedStyleKey, setSelectedStyleKey } = useImageryStyle(viewer, STYLES);
   const { drawBoundary } = useBoundaryOverlay(viewerRef);
+  useBuildingsTileset(viewer);
   const { viewModel: atmosphereViewModel, updateParameter: updateAtmosphereParameter } = useAtmosphereControls(viewer);
 
   const [infoOpen, setInfoOpen] = useState(false);

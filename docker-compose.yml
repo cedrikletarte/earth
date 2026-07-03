@@ -1,16 +1,16 @@
 services:
   app:
+    container_name: earth
     build:
       context: .
       args:
-        VITE_CESIUM_ION_TOKEN: ${VITE_CESIUM_ION_TOKEN}
         VITE_TILESERVER_URL: ${VITE_TILESERVER_URL}
         VITE_NOMINATIM_BASE_URL: ${VITE_NOMINATIM_BASE_URL}
     ports:
       - "3000:80"
     depends_on:
       - tileserver
-      - nominatim
+    #  - nominatim
 
   tileserver:
     image: maptiler/tileserver-gl:latest
@@ -19,31 +19,29 @@ services:
       - "8085:8080"
     volumes:
       - ${TILESERVER_DATA_PATH}:/data
-    environment:
-      - TILESERVER_GL_CACHE=0
     user: "0:0"
 
-  nominatim:
-    image: mediagis/nominatim:5.1
-    container_name: nominatim
-    ports:
-      - "8086:8080"
-    environment:
-      - PBF_PATH=/nominatim/data/${NOMINATIM_PBF_FILE}
-      - NOMINATIM_PASSWORD=${NOMINATIM_PASSWORD}
-      - NOMINATIM_IMPORT_STYLE=full
-      - NOMINATIM_TOKENIZER=icu
-      - POSTGRES_SHARED_BUFFERS=1GB
-      - POSTGRES_MAINTENANCE_WORK_MEM=2GB
-      - POSTGRES_AUTOVACUUM_WORK_MEM=512MB
-      - POSTGRES_WORK_MEM=16MB
-      - POSTGRES_EFFECTIVE_CACHE_SIZE=4GB
-    volumes:
-      - ${NOMINATIM_DATA_PATH}:/nominatim/data
-      - nominatim-db:/var/lib/postgresql/16/main
-      - nominatim-flatnode:/nominatim/flatnode
-    shm_size: 1g
-    restart: unless-stopped
+  #nominatim:
+  #  image: mediagis/nominatim:5.1
+  #  container_name: nominatim
+  #  ports:
+  #    - "8086:8080"
+  #  environment:
+  #    - PBF_PATH=/nominatim/data/${NOMINATIM_PBF_FILE}
+  #    - NOMINATIM_PASSWORD=${NOMINATIM_PASSWORD}
+  #    - NOMINATIM_IMPORT_STYLE=full
+  #    - NOMINATIM_TOKENIZER=icu
+  #    - POSTGRES_SHARED_BUFFERS=1GB
+  #    - POSTGRES_MAINTENANCE_WORK_MEM=2GB
+  #    - POSTGRES_AUTOVACUUM_WORK_MEM=512MB
+  #    - POSTGRES_WORK_MEM=16MB
+  #    - POSTGRES_EFFECTIVE_CACHE_SIZE=4GB
+  #  volumes:
+  #    - ${NOMINATIM_DATA_PATH}:/nominatim/data
+  #    - nominatim-db:/var/lib/postgresql/16/main
+  #    - nominatim-flatnode:/nominatim/flatnode
+  #  shm_size: 1g
+  #  restart: unless-stopped
 
   citydb:
     image: 3dcitydb/3dcitydb-pg:5-alpine
@@ -53,6 +51,26 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: montreal3d
       SRID: 2950
+    # Tuned for bulk CityGML imports (default postgres config caused multi-hour
+    # imports to crawl). synchronous_commit=off trades crash durability for
+    # import speed; acceptable since a failed import is just re-run.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=4GB
+      - -c
+      - effective_cache_size=12GB
+      - -c
+      - maintenance_work_mem=1GB
+      - -c
+      - work_mem=64MB
+      - -c
+      - max_wal_size=4GB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - synchronous_commit=off
+    shm_size: 1g
     ports:
       - "5440:5432"
     volumes:
