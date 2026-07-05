@@ -2,6 +2,7 @@
 .gitignore
 node_modules
 public/cesium
+public/tiles
 .env*
 *.md
 .dockerignore

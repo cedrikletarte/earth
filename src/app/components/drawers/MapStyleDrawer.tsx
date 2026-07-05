@@ -13,7 +13,11 @@ import MiniViewer from "./MiniViewer";
 export type MapStyle = {
   key: string;
   name: string;
+  // Single low-zoom provider, used for the style preview thumbnail (MiniViewer).
   createProvider: () => ImageryProvider;
+  // Full stack of imagery layers (e.g. planet + regional detail tiers), used
+  // for the main viewer.
+  createProviders: () => ImageryProvider[];
 };
 
 type MapStyleDrawerProps = {
@@ -129,7 +133,7 @@ export default function MapStyleDrawer({
                     borderRadius: 3,
                   }}
                 >
-                  <Typography variant="caption" color="#fff">{s.name}</Typography>
+                  <Typography variant="caption" sx={{ color: "#FFFFFF" }}>{s.name}</Typography>
                 </Box>
               </Box>
             </Box>

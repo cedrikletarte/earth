@@ -41,6 +41,26 @@ docker run --rm \
   -o /output \
   --geometricerror 500
 
+# The Ville de Montreal CityGML textures are full-resolution aerial/facade
+# photos (some 30+ MB each), which pg2b3dm embeds as-is — producing .glb
+# tiles hundreds of MB each and making the viewer crawl. Shrink and
+# recompress embedded textures in place before they ever reach the host.
+echo "==> Compressing embedded building textures (gltf-transform)"
+docker run --rm \
+  -v "$VOLUME_NAME:/data" \
+  node:22-alpine \
+  sh -c '
+    set -e
+    npm install -g @gltf-transform/cli@latest >/dev/null 2>&1
+    cd /data/content
+    for f in *.glb; do
+      [ -e "$f" ] || continue
+      echo "    $f"
+      gltf-transform optimize "$f" "$f.tmp" --texture-size 1024 --texture-compress jpeg
+      mv "$f.tmp" "$f"
+    done
+  '
+
 echo "==> Copying generated tiles from $VOLUME_NAME to $OUTPUT_DIR (replacing any previous output)"
 docker run --rm \
   -v "$VOLUME_NAME:/from:ro" \
