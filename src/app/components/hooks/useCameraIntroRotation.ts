@@ -3,7 +3,8 @@ import { Cartesian3, Math as CesiumMath, SceneMode, type Viewer as ViewerType } 
 
 const START_LONGITUDE = -73.6;
 const START_LATITUDE = 10;
-const START_HEIGHT_METERS = 20_000_000;
+const FAR_HEIGHT_METERS = 150_000_000;
+const CRUISE_HEIGHT_METERS = 20_000_000;
 
 const ROTATION_PERIOD_SECONDS = 60; // one full revolution at cruising speed
 const EASE_IN_SECONDS = 3;
@@ -30,10 +31,10 @@ export function useCameraIntroRotation(viewer: ViewerType | null) {
     const scene = viewer.scene;
     const camera = scene.camera;
 
-    // Frame the whole globe from space before spinning it, instead of
-    // inheriting Cesium's default (zoomed on North America) starting view.
+    // Frame the whole globe from far out in space before spinning it, instead
+    // of inheriting Cesium's default (zoomed on North America) starting view.
     camera.setView({
-      destination: Cartesian3.fromDegrees(START_LONGITUDE, START_LATITUDE, START_HEIGHT_METERS),
+      destination: Cartesian3.fromDegrees(START_LONGITUDE, START_LATITUDE, FAR_HEIGHT_METERS),
       orientation: { heading: 0, pitch: CesiumMath.toRadians(-90), roll: 0 },
     });
 
@@ -44,6 +45,7 @@ export function useCameraIntroRotation(viewer: ViewerType | null) {
     let lastTime = phaseStart;
     let currentSpeed = 0;
     let easeOutStartSpeed = 0;
+    let lastTargetHeight = FAR_HEIGHT_METERS;
 
     const stop = () => {
       scene.preRender.removeEventListener(tick);
@@ -74,7 +76,18 @@ export function useCameraIntroRotation(viewer: ViewerType | null) {
 
       if (phase === "easeIn") {
         const t = Math.min((now - phaseStart) / 1000 / EASE_IN_SECONDS, 1);
-        currentSpeed = cruiseSpeed * (1 - Math.pow(1 - t, 3)); // ease-out cubic ramp-up
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        currentSpeed = cruiseSpeed * eased; // ramp rotation up...
+
+        // ...and zoom in from the far starting height to cruise height on the
+        // same curve, so the globe grows as the spin picks up speed instead
+        // of just spinning in place. zoomIn() moves along the view vector by
+        // a distance, so we feed it the delta between last frame's target
+        // height and this frame's, not the absolute height.
+        const targetHeight = FAR_HEIGHT_METERS + (CRUISE_HEIGHT_METERS - FAR_HEIGHT_METERS) * eased;
+        camera.zoomIn(lastTargetHeight - targetHeight);
+        lastTargetHeight = targetHeight;
+
         if (t >= 1) phase = "cruise";
       } else if (phase === "cruise") {
         currentSpeed = cruiseSpeed;
