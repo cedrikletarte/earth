@@ -1,9 +1,10 @@
 .git
 .gitignore
-.next
 node_modules
 public/cesium
+public/tiles
 .env*
 *.md
 .dockerignore
 Dockerfile
+vm_2020_gml_01_06

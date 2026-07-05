@@ -13,7 +13,9 @@ export function useImageryStyle(viewer: ViewerType | null, styles: MapStyle[]) {
     if (!style) return;
     try {
       viewer.imageryLayers.removeAll();
-      viewer.imageryLayers.addImageryProvider(style.createProvider());
+      for (const provider of style.createProviders()) {
+        viewer.imageryLayers.addImageryProvider(provider);
+      }
       viewer.scene.requestRender();
     } catch (e) {
       console.warn("Failed to apply imagery style:", e);

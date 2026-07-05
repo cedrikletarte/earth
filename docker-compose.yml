@@ -1,17 +1,28 @@
 services:
   app:
+    container_name: earth
     build:
       context: .
       args:
-        VITE_CESIUM_ION_TOKEN: ${VITE_CESIUM_ION_TOKEN}
+        VITE_BASEMAP_SOURCE: ${VITE_BASEMAP_SOURCE}
         VITE_TILESERVER_URL: ${VITE_TILESERVER_URL}
+        VITE_PMTILES_URL: ${VITE_PMTILES_URL}
         VITE_NOMINATIM_BASE_URL: ${VITE_NOMINATIM_BASE_URL}
     ports:
       - "3000:80"
+    volumes:
+      # 3D tiles are generated separately (scripts/generate-3d-tiles.sh) and can be
+      # multiple GB — mount them instead of baking them into the image so app
+      # rebuilds stay fast and tiles can be regenerated without a rebuild.
+      - ./public/tiles:/usr/share/nginx/html/tiles:ro
     depends_on:
+      - pmtiles
       - tileserver
-      - nominatim
+    #  - nominatim
 
+  # Bake-time only: rasterizes the OSM styles into PNGs. Not a runtime
+  # dependency of `app` anymore — start it manually (`docker compose up
+  # tileserver`) when re-baking with scripts/bake-pmtiles.sh.
   tileserver:
     image: maptiler/tileserver-gl:latest
     container_name: tileserver
@@ -19,31 +30,74 @@ services:
       - "8085:8080"
     volumes:
       - ${TILESERVER_DATA_PATH}:/data
-    environment:
-      - TILESERVER_GL_CACHE=0
     user: "0:0"
 
-  nominatim:
-    image: mediagis/nominatim:5.1
-    container_name: nominatim
+  # Serves the PMTiles archives produced by scripts/bake-pmtiles.sh as a
+  # plain ZXY tile endpoint (range reads over the .pmtiles files, no
+  # rendering) — this is what `app` actually talks to at runtime.
+  pmtiles:
+    image: protomaps/go-pmtiles
+    container_name: pmtiles
+    command: serve /data --public-url ${VITE_PMTILES_URL} --cors=*
     ports:
-      - "8086:8080"
-    environment:
-      - PBF_PATH=/nominatim/data/${NOMINATIM_PBF_FILE}
-      - NOMINATIM_PASSWORD=${NOMINATIM_PASSWORD}
-      - NOMINATIM_IMPORT_STYLE=full
-      - NOMINATIM_TOKENIZER=icu
-      - POSTGRES_SHARED_BUFFERS=1GB
-      - POSTGRES_MAINTENANCE_WORK_MEM=2GB
-      - POSTGRES_AUTOVACUUM_WORK_MEM=512MB
-      - POSTGRES_WORK_MEM=16MB
-      - POSTGRES_EFFECTIVE_CACHE_SIZE=4GB
+      - "8087:8080"
     volumes:
-      - ${NOMINATIM_DATA_PATH}:/nominatim/data
-      - nominatim-db:/var/lib/postgresql/16/main
-      - nominatim-flatnode:/nominatim/flatnode
+      - ./data/pmtiles:/data
+
+  #nominatim:
+  #  image: mediagis/nominatim:5.1
+  #  container_name: nominatim
+  #  ports:
+  #    - "8086:8080"
+  #  environment:
+  #    - PBF_PATH=/nominatim/data/${NOMINATIM_PBF_FILE}
+  #    - NOMINATIM_PASSWORD=${NOMINATIM_PASSWORD}
+  #    - NOMINATIM_IMPORT_STYLE=full
+  #    - NOMINATIM_TOKENIZER=icu
+  #    - POSTGRES_SHARED_BUFFERS=1GB
+  #    - POSTGRES_MAINTENANCE_WORK_MEM=2GB
+  #    - POSTGRES_AUTOVACUUM_WORK_MEM=512MB
+  #    - POSTGRES_WORK_MEM=16MB
+  #    - POSTGRES_EFFECTIVE_CACHE_SIZE=4GB
+  #  volumes:
+  #    - ${NOMINATIM_DATA_PATH}:/nominatim/data
+  #    - nominatim-db:/var/lib/postgresql/16/main
+  #    - nominatim-flatnode:/nominatim/flatnode
+  #  shm_size: 1g
+  #  restart: unless-stopped
+
+  citydb:
+    image: 3dcitydb/3dcitydb-pg:5-alpine
+    container_name: citydb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: montreal3d
+      SRID: 2950
+    # Tuned for bulk CityGML imports (default postgres config caused multi-hour
+    # imports to crawl). synchronous_commit=off trades crash durability for
+    # import speed; acceptable since a failed import is just re-run.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=4GB
+      - -c
+      - effective_cache_size=12GB
+      - -c
+      - maintenance_work_mem=1GB
+      - -c
+      - work_mem=64MB
+      - -c
+      - max_wal_size=4GB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - synchronous_commit=off
     shm_size: 1g
-    restart: unless-stopped
+    ports:
+      - "5440:5432"
+    volumes:
+      - citydb-data:/var/lib/postgresql
 
 volumes:
   nominatim-db:
@@ -51,4 +105,7 @@ volumes:
     external: true
   nominatim-flatnode:
     name: nominatim-flatnode
+    external: true
+  citydb-data:
+    name: citydb-data
     external: true

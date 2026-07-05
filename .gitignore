@@ -25,5 +25,5 @@ yarn-error.log*
 
 
 /public/tiles
-/scripts/generate-3d-tiles.sh
-/scripts/import-citygml.sh
+vm_2020_gml_01_06
+/data/pmtiles
