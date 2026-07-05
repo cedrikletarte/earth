@@ -7,14 +7,8 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
-import Slider from "@mui/material/Slider";
 import Alert from "@mui/material/Alert";
-import Accordion from "@mui/material/Accordion";
-import AccordionSummary from "@mui/material/AccordionSummary";
-import AccordionDetails from "@mui/material/AccordionDetails";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { ControlSection, CheckboxControl as SharedCheckboxControl, SliderControl as SharedSliderControl } from "../SettingsControls";
 
 interface AtmosphereControlsProps {
   viewModel: AtmosphereViewModel | null;
@@ -64,37 +58,6 @@ export default function AtmosphereControls({
     setActiveTab(tab);
   };
 
-  const ControlSection = ({
-    title,
-    children,
-  }: {
-    title: string;
-    children: React.ReactNode;
-  }) => (
-    <Accordion
-      defaultExpanded
-      sx={{
-        mb: 1,
-        boxShadow: 1,
-        width: "100%",
-        "& .MuiAccordionSummary-content": {
-          minWidth: 0, // Allow content to shrink
-        },
-      }}
-    >
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography variant="subtitle2" sx={{ fontWeight: "600" }}>
-          {title}
-        </Typography>
-      </AccordionSummary>
-      <AccordionDetails>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {children}
-        </Box>
-      </AccordionDetails>
-    </Accordion>
-  );
-
   const CheckboxControl = ({
     label,
     property,
@@ -104,27 +67,11 @@ export default function AtmosphereControls({
     property: keyof AtmosphereViewModel;
     checked: boolean;
   }) => (
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={checked}
-          disabled={!is3DMode}
-          onChange={(e) => onUpdateParameter(property, e.target.checked as AtmosphereViewModel[keyof AtmosphereViewModel])}
-          size="small"
-        />
-      }
-      label={
-        <Typography
-          variant="body2"
-          sx={{ opacity: !is3DMode ? 0.5 : 1 }}
-        >
-          {label}
-        </Typography>
-      }
-      sx={{
-        margin: 0,
-        opacity: !is3DMode ? 0.5 : 1,
-      }}
+    <SharedCheckboxControl
+      label={label}
+      checked={checked}
+      disabled={!is3DMode}
+      onChange={(v) => onUpdateParameter(property, v as AtmosphereViewModel[keyof AtmosphereViewModel])}
     />
   );
 
@@ -142,49 +89,17 @@ export default function AtmosphereControls({
     min: number;
     max: number;
     step?: number;
-  }) => {
-    const [localValue, setLocalValue] = useState(value);
-
-    // Update local value when prop changes
-    useEffect(() => {
-      setLocalValue(value);
-    }, [value]);
-
-    return (
-      <Box sx={{ opacity: !is3DMode ? 0.5 : 1 }}>
-        <Typography variant="caption" color="text.secondary" gutterBottom>
-          {label}: {localValue.toFixed(2)}
-        </Typography>
-        <Slider
-          value={localValue}
-          min={min}
-          max={max}
-          step={step}
-          disabled={!is3DMode}
-          onChange={(_, newValue) => {
-            // Update local state immediately for smooth sliding
-            setLocalValue(newValue as number);
-          }}
-          onChangeCommitted={(_, newValue) => {
-            onUpdateParameter(property, newValue as AtmosphereViewModel[keyof AtmosphereViewModel]);
-          }}
-          size="small"
-          sx={{
-            "& .MuiSlider-thumb": {
-              width: 16,
-              height: 16,
-            },
-            "& .MuiSlider-track": {
-              height: 3,
-            },
-            "& .MuiSlider-rail": {
-              height: 3,
-            },
-          }}
-        />
-      </Box>
-    );
-  };
+  }) => (
+    <SharedSliderControl
+      label={label}
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+      disabled={!is3DMode}
+      onChange={(v) => onUpdateParameter(property, v as AtmosphereViewModel[keyof AtmosphereViewModel])}
+    />
+  );
 
   return (
     <Box

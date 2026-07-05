@@ -4,14 +4,25 @@ services:
     build:
       context: .
       args:
+        VITE_BASEMAP_SOURCE: ${VITE_BASEMAP_SOURCE}
         VITE_TILESERVER_URL: ${VITE_TILESERVER_URL}
+        VITE_PMTILES_URL: ${VITE_PMTILES_URL}
         VITE_NOMINATIM_BASE_URL: ${VITE_NOMINATIM_BASE_URL}
     ports:
       - "3000:80"
+    volumes:
+      # 3D tiles are generated separately (scripts/generate-3d-tiles.sh) and can be
+      # multiple GB — mount them instead of baking them into the image so app
+      # rebuilds stay fast and tiles can be regenerated without a rebuild.
+      - ./public/tiles:/usr/share/nginx/html/tiles:ro
     depends_on:
+      - pmtiles
       - tileserver
     #  - nominatim
 
+  # Bake-time only: rasterizes the OSM styles into PNGs. Not a runtime
+  # dependency of `app` anymore — start it manually (`docker compose up
+  # tileserver`) when re-baking with scripts/bake-pmtiles.sh.
   tileserver:
     image: maptiler/tileserver-gl:latest
     container_name: tileserver
@@ -20,6 +31,18 @@ services:
     volumes:
       - ${TILESERVER_DATA_PATH}:/data
     user: "0:0"
+
+  # Serves the PMTiles archives produced by scripts/bake-pmtiles.sh as a
+  # plain ZXY tile endpoint (range reads over the .pmtiles files, no
+  # rendering) — this is what `app` actually talks to at runtime.
+  pmtiles:
+    image: protomaps/go-pmtiles
+    container_name: pmtiles
+    command: serve /data --public-url ${VITE_PMTILES_URL} --cors=*
+    ports:
+      - "8087:8080"
+    volumes:
+      - ./data/pmtiles:/data
 
   #nominatim:
   #  image: mediagis/nominatim:5.1
@@ -74,7 +97,7 @@ services:
     ports:
       - "5440:5432"
     volumes:
-      - citydb-data:/var/lib/postgresql/data
+      - citydb-data:/var/lib/postgresql
 
 volumes:
   nominatim-db:
