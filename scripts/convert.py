@@ -12,8 +12,9 @@ def I(a): return Image.fromarray(a)
 # --- 4 walls: corrections from visual testing ---
 I(faces['F']).rotate(90,  expand=True).save('public/skybox/px.png')  # +X
 I(faces['B']).rotate(-90, expand=True).save('public/skybox/nx.png')  # -X
-I(faces['R']).rotate(180).save('public/skybox/py.png')               # +Y
-I(faces['L']).save('public/skybox/ny.png')                           # -Y
+# Cesium's skybox Y axis is mirrored relative to py360convert's R/L faces
+I(faces['L']).save('public/skybox/py.png')                           # +Y
+I(faces['R']).rotate(180).save('public/skybox/ny.png')               # -Y
 
 # --- ceiling / floor: rotation to adjust if needed ---
 I(faces['U']).save('public/skybox/pz.png')   # +Z  ceiling

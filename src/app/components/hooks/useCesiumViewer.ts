@@ -35,8 +35,8 @@ export function useCesiumViewer(
         sources: {
           positiveX: "/skybox/px.png",
           negativeX: "/skybox/nx.png",
-          positiveY: "/skybox/ny.png",
-          negativeY: "/skybox/py.png",
+          positiveY: "/skybox/py.png",
+          negativeY: "/skybox/ny.png",
           positiveZ: "/skybox/pz.png",
           negativeZ: "/skybox/nz.png",
         },
