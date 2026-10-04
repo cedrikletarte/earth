@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { SceneMode } from "cesium";
+import { createContext, useContext, useState, useEffect } from "react";
+import { SceneMode, type Viewer } from "cesium";
 import type { AtmosphereViewModel } from "./types";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -22,8 +22,139 @@ interface AtmosphereControlsProps {
     key: K,
     value: AtmosphereViewModel[K]
   ) => void;
-  viewer?: any; // Pass viewer to check scene mode
+  viewer?: Viewer | null; // Pass viewer to check scene mode
 }
+
+type UpdateParameter = AtmosphereControlsProps["onUpdateParameter"];
+
+const ControlsContext = createContext<{
+  disabled: boolean;
+  onUpdateParameter: UpdateParameter;
+}>({ disabled: false, onUpdateParameter: () => {} });
+
+const ControlSection = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <Accordion
+    defaultExpanded
+    sx={{
+      mb: 1,
+      boxShadow: 1,
+      width: "100%",
+      "& .MuiAccordionSummary-content": {
+        minWidth: 0, // Allow content to shrink
+      },
+    }}
+  >
+    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+      <Typography variant="subtitle2" sx={{ fontWeight: "600" }}>
+        {title}
+      </Typography>
+    </AccordionSummary>
+    <AccordionDetails>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {children}
+      </Box>
+    </AccordionDetails>
+  </Accordion>
+);
+
+const CheckboxControl = ({
+  label,
+  property,
+  checked,
+}: {
+  label: string;
+  property: keyof AtmosphereViewModel;
+  checked: boolean;
+}) => {
+  const { disabled, onUpdateParameter } = useContext(ControlsContext);
+  return (
+    <FormControlLabel
+      control={
+        <Checkbox
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onUpdateParameter(property, e.target.checked as AtmosphereViewModel[keyof AtmosphereViewModel])}
+          size="small"
+        />
+      }
+      label={
+        <Typography
+          variant="body2"
+          sx={{ opacity: disabled ? 0.5 : 1 }}
+        >
+          {label}
+        </Typography>
+      }
+      sx={{
+        margin: 0,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    />
+  );
+};
+
+const SliderControl = ({
+  label,
+  property,
+  value,
+  min,
+  max,
+  step = 0.01,
+}: {
+  label: string;
+  property: keyof AtmosphereViewModel;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+}) => {
+  const { disabled, onUpdateParameter } = useContext(ControlsContext);
+  // Value while dragging; null once committed so the prop takes over again
+  const [dragValue, setDragValue] = useState<number | null>(null);
+  const shownValue = dragValue ?? value;
+
+  return (
+    <Box sx={{ opacity: disabled ? 0.5 : 1 }}>
+      <Typography variant="caption" color="text.secondary" gutterBottom>
+        {label}: {shownValue.toFixed(2)}
+      </Typography>
+      <Slider
+        value={shownValue}
+        min={min}
+        max={max}
+        step={step}
+        disabled={disabled}
+        onChange={(_, newValue) => {
+          // Update local state immediately for smooth sliding
+          setDragValue(newValue as number);
+        }}
+        onChangeCommitted={(_, newValue) => {
+          onUpdateParameter(property, newValue as AtmosphereViewModel[keyof AtmosphereViewModel]);
+          setDragValue(null);
+        }}
+        size="small"
+        sx={{
+          "& .MuiSlider-thumb": {
+            width: 16,
+            height: 16,
+          },
+          "& .MuiSlider-track": {
+            height: 3,
+          },
+          "& .MuiSlider-rail": {
+            height: 3,
+          },
+        }}
+      />
+    </Box>
+  );
+};
 
 export default function AtmosphereControls({
   viewModel,
@@ -60,439 +191,315 @@ export default function AtmosphereControls({
     return null;
   }
 
-  const handleTabClick = (tab: typeof activeTab) => {
-    setActiveTab(tab);
-  };
-
-  const ControlSection = ({
-    title,
-    children,
-  }: {
-    title: string;
-    children: React.ReactNode;
-  }) => (
-    <Accordion
-      defaultExpanded
-      sx={{
-        mb: 1,
-        boxShadow: 1,
-        width: "100%",
-        "& .MuiAccordionSummary-content": {
-          minWidth: 0, // Allow content to shrink
-        },
-      }}
-    >
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography variant="subtitle2" sx={{ fontWeight: "600" }}>
-          {title}
-        </Typography>
-      </AccordionSummary>
-      <AccordionDetails>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {children}
-        </Box>
-      </AccordionDetails>
-    </Accordion>
-  );
-
-  const CheckboxControl = ({
-    label,
-    property,
-    checked,
-  }: {
-    label: string;
-    property: keyof AtmosphereViewModel;
-    checked: boolean;
-  }) => (
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={checked}
-          disabled={!is3DMode}
-          onChange={(e) => onUpdateParameter(property, e.target.checked as AtmosphereViewModel[keyof AtmosphereViewModel])}
-          size="small"
-        />
-      }
-      label={
-        <Typography
-          variant="body2"
-          sx={{ opacity: !is3DMode ? 0.5 : 1 }}
-        >
-          {label}
-        </Typography>
-      }
-      sx={{
-        margin: 0,
-        opacity: !is3DMode ? 0.5 : 1,
-      }}
-    />
-  );
-
-  const SliderControl = ({
-    label,
-    property,
-    value,
-    min,
-    max,
-    step = 0.01,
-  }: {
-    label: string;
-    property: keyof AtmosphereViewModel;
-    value: number;
-    min: number;
-    max: number;
-    step?: number;
-  }) => {
-    const [localValue, setLocalValue] = useState(value);
-
-    // Update local value when prop changes
-    useEffect(() => {
-      setLocalValue(value);
-    }, [value]);
-
-    return (
-      <Box sx={{ opacity: !is3DMode ? 0.5 : 1 }}>
-        <Typography variant="caption" color="text.secondary" gutterBottom>
-          {label}: {localValue.toFixed(2)}
-        </Typography>
-        <Slider
-          value={localValue}
-          min={min}
-          max={max}
-          step={step}
-          disabled={!is3DMode}
-          onChange={(_, newValue) => {
-            // Update local state immediately for smooth sliding
-            setLocalValue(newValue as number);
-          }}
-          onChangeCommitted={(_, newValue) => {
-            onUpdateParameter(property, newValue as AtmosphereViewModel[keyof AtmosphereViewModel]);
-          }}
-          size="small"
-          sx={{
-            "& .MuiSlider-thumb": {
-              width: 16,
-              height: 16,
-            },
-            "& .MuiSlider-track": {
-              height: 3,
-            },
-            "& .MuiSlider-rail": {
-              height: 3,
-            },
-          }}
-        />
-      </Box>
-    );
-  };
-
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        overflowX: "hidden", // Hide horizontal scrollbar
-      }}
-    >
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-        <Typography variant="body1" sx={{ flex: 1 }}>
-          Atmosphere
-        </Typography>
-      </Box>
-
-      {/* 2D Mode Warning */}
-      {!is3DMode && (
-        <Alert severity="warning" sx={{ mb: 2, fontSize: "0.75rem" }}>
-          <Typography variant="caption">
-            <strong>Note:</strong> Atmosphere effects are disabled in 2D mode.
-            Switch to 3D view to use these controls.
-          </Typography>
-        </Alert>
-      )}
-
-      {/* Tab Navigation */}
-      <Tabs
-        value={activeTab}
-        onChange={(_, newValue) => setActiveTab(newValue)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{
-          mb: 2,
-          minHeight: "auto",
-          maxWidth: "100%",
-          "& .MuiTab-root": {
-            minHeight: "auto",
-            py: 1,
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            minWidth: "auto",
-            px: 1.5,
-          },
-          "& .MuiTabs-scrollButtons": {
-            display: "none", // Hide scroll buttons if not needed
-          },
-        }}
-      >
-        <Tab label="Globe" value="globe" />
-        <Tab label="Ground" value="ground" />
-        <Tab label="Sky" value="sky" />
-        <Tab label="Fog" value="fog" />
-        <Tab label="Scene" value="scene" />
-      </Tabs>
-
-      {/* Tab Content */}
+    <ControlsContext.Provider value={{ disabled: !is3DMode, onUpdateParameter }}>
       <Box
         sx={{
-          overflowY: "auto",
-          overflowX: "hidden", // Hide horizontal scrollbar
-          flex: 1,
-          maxHeight: "calc(100vh - 200px)",
+          display: "flex",
+          flexDirection: "column",
           width: "100%",
+          overflowX: "hidden", // Hide horizontal scrollbar
         }}
       >
-        {activeTab === "globe" && (
-          <Box>
-            <ControlSection title="Basic Settings">
-              <CheckboxControl
-                label="Enable Lighting"
-                property="enableLighting"
-                checked={viewModel.enableLighting}
-              />
-              <CheckboxControl
-                label="Ground Translucency"
-                property="groundTranslucency"
-                checked={viewModel.groundTranslucency}
-              />
-            </ControlSection>
-          </Box>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+          <Typography variant="body1" sx={{ flex: 1 }}>
+            Atmosphere
+          </Typography>
+        </Box>
+
+        {/* 2D Mode Warning */}
+        {!is3DMode && (
+          <Alert severity="warning" sx={{ mb: 2, fontSize: "0.75rem" }}>
+            <Typography variant="caption">
+              <strong>Note:</strong> Atmosphere effects are disabled in 2D mode.
+              Switch to 3D view to use these controls.
+            </Typography>
+          </Alert>
         )}
 
-        {activeTab === "ground" && (
-          <Box>
-            <ControlSection title="Ground Atmosphere">
-              <CheckboxControl
-                label="Show Ground Atmosphere"
-                property="showGroundAtmosphere"
-                checked={viewModel.showGroundAtmosphere}
-              />
-              <CheckboxControl
-                label="Dynamic Lighting"
-                property="dynamicLighting"
-                checked={viewModel.dynamicLighting}
-              />
-              <CheckboxControl
-                label="Dynamic Lighting From Sun"
-                property="dynamicLightingFromSun"
-                checked={viewModel.dynamicLightingFromSun}
-              />
-            </ControlSection>
+        {/* Tab Navigation */}
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            mb: 2,
+            minHeight: "auto",
+            maxWidth: "100%",
+            "& .MuiTab-root": {
+              minHeight: "auto",
+              py: 1,
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              minWidth: "auto",
+              px: 1.5,
+            },
+            "& .MuiTabs-scrollButtons": {
+              display: "none", // Hide scroll buttons if not needed
+            },
+          }}
+        >
+          <Tab label="Globe" value="globe" />
+          <Tab label="Ground" value="ground" />
+          <Tab label="Sky" value="sky" />
+          <Tab label="Fog" value="fog" />
+          <Tab label="Scene" value="scene" />
+        </Tabs>
 
-            <ControlSection title="Light Intensity">
-              <SliderControl
-                label="Light Intensity"
-                property="groundAtmosphereLightIntensity"
-                value={viewModel.groundAtmosphereLightIntensity}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-            </ControlSection>
+        {/* Tab Content */}
+        <Box
+          sx={{
+            overflowY: "auto",
+            overflowX: "hidden", // Hide horizontal scrollbar
+            flex: 1,
+            maxHeight: "calc(100vh - 200px)",
+            width: "100%",
+          }}
+        >
+          {activeTab === "globe" && (
+            <Box>
+              <ControlSection title="Basic Settings">
+                <CheckboxControl
+                  label="Enable Lighting"
+                  property="enableLighting"
+                  checked={viewModel.enableLighting}
+                />
+                <CheckboxControl
+                  label="Ground Translucency"
+                  property="groundTranslucency"
+                  checked={viewModel.groundTranslucency}
+                />
+              </ControlSection>
+            </Box>
+          )}
 
-            <ControlSection title="Rayleigh Coefficients">
-              <SliderControl
-                label="Red"
-                property="groundAtmosphereRayleighCoefficientR"
-                value={viewModel.groundAtmosphereRayleighCoefficientR}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-              <SliderControl
-                label="Green"
-                property="groundAtmosphereRayleighCoefficientG"
-                value={viewModel.groundAtmosphereRayleighCoefficientG}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-              <SliderControl
-                label="Blue"
-                property="groundAtmosphereRayleighCoefficientB"
-                value={viewModel.groundAtmosphereRayleighCoefficientB}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-            </ControlSection>
+          {activeTab === "ground" && (
+            <Box>
+              <ControlSection title="Ground Atmosphere">
+                <CheckboxControl
+                  label="Show Ground Atmosphere"
+                  property="showGroundAtmosphere"
+                  checked={viewModel.showGroundAtmosphere}
+                />
+                <CheckboxControl
+                  label="Dynamic Lighting"
+                  property="dynamicLighting"
+                  checked={viewModel.dynamicLighting}
+                />
+                <CheckboxControl
+                  label="Dynamic Lighting From Sun"
+                  property="dynamicLightingFromSun"
+                  checked={viewModel.dynamicLightingFromSun}
+                />
+              </ControlSection>
 
-            <ControlSection title="Other Parameters">
-              <SliderControl
-                label="Mie Coefficient"
-                property="groundAtmosphereMieCoefficient"
-                value={viewModel.groundAtmosphereMieCoefficient}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-              <SliderControl
-                label="Hue Shift"
-                property="groundHueShift"
-                value={viewModel.groundHueShift}
-                min={-1}
-                max={1}
-                step={0.01}
-              />
-              <SliderControl
-                label="Saturation Shift"
-                property="groundSaturationShift"
-                value={viewModel.groundSaturationShift}
-                min={-1}
-                max={1}
-                step={0.01}
-              />
-              <SliderControl
-                label="Brightness Shift"
-                property="groundBrightnessShift"
-                value={viewModel.groundBrightnessShift}
-                min={-1}
-                max={1}
-                step={0.01}
-              />
-            </ControlSection>
-          </Box>
-        )}
+              <ControlSection title="Light Intensity">
+                <SliderControl
+                  label="Light Intensity"
+                  property="groundAtmosphereLightIntensity"
+                  value={viewModel.groundAtmosphereLightIntensity}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+              </ControlSection>
 
-        {activeTab === "sky" && (
-          <Box>
-            <ControlSection title="Sky Atmosphere">
-              <CheckboxControl
-                label="Show Sky Atmosphere"
-                property="showSkyAtmosphere"
-                checked={viewModel.showSkyAtmosphere}
-              />
-              <CheckboxControl
-                label="Per Fragment Atmosphere"
-                property="perFragmentAtmosphere"
-                checked={viewModel.perFragmentAtmosphere}
-              />
-            </ControlSection>
+              <ControlSection title="Rayleigh Coefficients">
+                <SliderControl
+                  label="Red"
+                  property="groundAtmosphereRayleighCoefficientR"
+                  value={viewModel.groundAtmosphereRayleighCoefficientR}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+                <SliderControl
+                  label="Green"
+                  property="groundAtmosphereRayleighCoefficientG"
+                  value={viewModel.groundAtmosphereRayleighCoefficientG}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+                <SliderControl
+                  label="Blue"
+                  property="groundAtmosphereRayleighCoefficientB"
+                  value={viewModel.groundAtmosphereRayleighCoefficientB}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+              </ControlSection>
 
-            <ControlSection title="Light Intensity">
-              <SliderControl
-                label="Light Intensity"
-                property="skyAtmosphereLightIntensity"
-                value={viewModel.skyAtmosphereLightIntensity}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-            </ControlSection>
+              <ControlSection title="Other Parameters">
+                <SliderControl
+                  label="Mie Coefficient"
+                  property="groundAtmosphereMieCoefficient"
+                  value={viewModel.groundAtmosphereMieCoefficient}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+                <SliderControl
+                  label="Hue Shift"
+                  property="groundHueShift"
+                  value={viewModel.groundHueShift}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                />
+                <SliderControl
+                  label="Saturation Shift"
+                  property="groundSaturationShift"
+                  value={viewModel.groundSaturationShift}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                />
+                <SliderControl
+                  label="Brightness Shift"
+                  property="groundBrightnessShift"
+                  value={viewModel.groundBrightnessShift}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                />
+              </ControlSection>
+            </Box>
+          )}
 
-            <ControlSection title="Rayleigh Coefficients">
-              <SliderControl
-                label="Red"
-                property="skyAtmosphereRayleighCoefficientR"
-                value={viewModel.skyAtmosphereRayleighCoefficientR}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-              <SliderControl
-                label="Green"
-                property="skyAtmosphereRayleighCoefficientG"
-                value={viewModel.skyAtmosphereRayleighCoefficientG}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-              <SliderControl
-                label="Blue"
-                property="skyAtmosphereRayleighCoefficientB"
-                value={viewModel.skyAtmosphereRayleighCoefficientB}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-            </ControlSection>
+          {activeTab === "sky" && (
+            <Box>
+              <ControlSection title="Sky Atmosphere">
+                <CheckboxControl
+                  label="Show Sky Atmosphere"
+                  property="showSkyAtmosphere"
+                  checked={viewModel.showSkyAtmosphere}
+                />
+                <CheckboxControl
+                  label="Per Fragment Atmosphere"
+                  property="perFragmentAtmosphere"
+                  checked={viewModel.perFragmentAtmosphere}
+                />
+              </ControlSection>
 
-            <ControlSection title="Other Parameters">
-              <SliderControl
-                label="Mie Coefficient"
-                property="skyAtmosphereMieCoefficient"
-                value={viewModel.skyAtmosphereMieCoefficient}
-                min={0}
-                max={50}
-                step={0.1}
-              />
-              <SliderControl
-                label="Hue Shift"
-                property="skyHueShift"
-                value={viewModel.skyHueShift}
-                min={-1}
-                max={1}
-                step={0.01}
-              />
-              <SliderControl
-                label="Saturation Shift"
-                property="skySaturationShift"
-                value={viewModel.skySaturationShift}
-                min={-1}
-                max={1}
-                step={0.01}
-              />
-              <SliderControl
-                label="Brightness Shift"
-                property="skyBrightnessShift"
-                value={viewModel.skyBrightnessShift}
-                min={-1}
-                max={1}
-                step={0.01}
-              />
-            </ControlSection>
-          </Box>
-        )}
+              <ControlSection title="Light Intensity">
+                <SliderControl
+                  label="Light Intensity"
+                  property="skyAtmosphereLightIntensity"
+                  value={viewModel.skyAtmosphereLightIntensity}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+              </ControlSection>
 
-        {activeTab === "fog" && (
-          <Box>
-            <ControlSection title="Fog Settings">
-              <CheckboxControl
-                label="Show Fog"
-                property="showFog"
-                checked={viewModel.showFog}
-              />
-              <SliderControl
-                label="Density"
-                property="density"
-                value={viewModel.density}
-                min={0}
-                max={5}
-                step={0.01}
-              />
-              <SliderControl
-                label="Minimum Brightness"
-                property="minimumBrightness"
-                value={viewModel.minimumBrightness}
-                min={0}
-                max={1}
-                step={0.01}
-              />
-            </ControlSection>
-          </Box>
-        )}
+              <ControlSection title="Rayleigh Coefficients">
+                <SliderControl
+                  label="Red"
+                  property="skyAtmosphereRayleighCoefficientR"
+                  value={viewModel.skyAtmosphereRayleighCoefficientR}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+                <SliderControl
+                  label="Green"
+                  property="skyAtmosphereRayleighCoefficientG"
+                  value={viewModel.skyAtmosphereRayleighCoefficientG}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+                <SliderControl
+                  label="Blue"
+                  property="skyAtmosphereRayleighCoefficientB"
+                  value={viewModel.skyAtmosphereRayleighCoefficientB}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+              </ControlSection>
 
-        {activeTab === "scene" && (
-          <Box>
-            <ControlSection title="Scene Settings">
-              <CheckboxControl
-                label="HDR"
-                property="hdr"
-                checked={viewModel.hdr}
-              />
-            </ControlSection>
-          </Box>
-        )}
+              <ControlSection title="Other Parameters">
+                <SliderControl
+                  label="Mie Coefficient"
+                  property="skyAtmosphereMieCoefficient"
+                  value={viewModel.skyAtmosphereMieCoefficient}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+                <SliderControl
+                  label="Hue Shift"
+                  property="skyHueShift"
+                  value={viewModel.skyHueShift}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                />
+                <SliderControl
+                  label="Saturation Shift"
+                  property="skySaturationShift"
+                  value={viewModel.skySaturationShift}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                />
+                <SliderControl
+                  label="Brightness Shift"
+                  property="skyBrightnessShift"
+                  value={viewModel.skyBrightnessShift}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                />
+              </ControlSection>
+            </Box>
+          )}
+
+          {activeTab === "fog" && (
+            <Box>
+              <ControlSection title="Fog Settings">
+                <CheckboxControl
+                  label="Show Fog"
+                  property="showFog"
+                  checked={viewModel.showFog}
+                />
+                <SliderControl
+                  label="Density"
+                  property="density"
+                  value={viewModel.density}
+                  min={0}
+                  max={5}
+                  step={0.01}
+                />
+                <SliderControl
+                  label="Minimum Brightness"
+                  property="minimumBrightness"
+                  value={viewModel.minimumBrightness}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                />
+              </ControlSection>
+            </Box>
+          )}
+
+          {activeTab === "scene" && (
+            <Box>
+              <ControlSection title="Scene Settings">
+                <CheckboxControl
+                  label="HDR"
+                  property="hdr"
+                  checked={viewModel.hdr}
+                />
+              </ControlSection>
+            </Box>
+          )}
+        </Box>
       </Box>
-    </Box>
+    </ControlsContext.Provider>
   );
 }
