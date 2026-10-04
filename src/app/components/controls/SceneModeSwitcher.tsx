@@ -7,11 +7,48 @@ import { type Viewer as ViewerType, SceneMode } from "cesium";
 import ViewInArIcon from "@mui/icons-material/ViewInAr"; // 3D
 import GridOnIcon from "@mui/icons-material/GridOn"; // 2D
 import ViewWeekIcon from "@mui/icons-material/ViewWeek"; // Columbus View (CV)
-import { useRightDockOffset } from "./RightDockContext";
+import { useRightDockOffset } from "./rightDock";
 
 type Props = {
   viewer: ViewerType | null;
 };
+
+const Btn = ({
+  label,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) => (
+  <Tooltip title={label} placement="left">
+    <Box
+      role="button"
+      aria-label={label}
+      aria-pressed={active}
+      onClick={onClick}
+      sx={{
+        width: 36,
+        height: 36,
+        borderRadius: 1.5,
+        bgcolor: active ? "#4caf50" : "rgba(0,0,0,0.55)",
+        color: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: 2,
+        cursor: "pointer",
+        "&:hover": { bgcolor: active ? "#43a047" : "rgba(0,0,0,0.75)" },
+        backdropFilter: "blur(2px)",
+      }}
+    >
+      {children}
+    </Box>
+  </Tooltip>
+);
 
 export default function SceneModeSwitcher({ viewer }: Props) {
   const [mode, setMode] = useState<number | null>(null);
@@ -21,20 +58,18 @@ export default function SceneModeSwitcher({ viewer }: Props) {
   // Slower morph for smoother visual transition between modes (seconds)
   const morphDuration = 1.2;
 
-  // Sync local state with viewer scene mode
+  // Track scene mode changes; before the first morph, read it straight from the viewer
   useEffect(() => {
     if (!viewer) return;
-    setMode(viewer.scene.mode);
     const update = () => setMode(viewer.scene.mode);
     viewer.scene.morphComplete.addEventListener(update);
     return () => {
       try {
         viewer.scene.morphComplete.removeEventListener(update);
-      } catch {}
+      } catch { /* ignore */ }
     };
   }, [viewer]);
-
-  const isSelected = (m: number) => mode === m;
+  const currentMode = mode ?? viewer?.scene.mode ?? null;
 
   const switchTo = (target: number) => {
     if (!viewer) return;
@@ -45,43 +80,6 @@ export default function SceneModeSwitcher({ viewer }: Props) {
     else if (target === SceneMode.COLUMBUS_VIEW)
       viewer.scene.morphToColumbusView(morphDuration);
   };
-
-  const Btn = ({
-    label,
-    active,
-    onClick,
-    children,
-  }: {
-    label: string;
-    active: boolean;
-    onClick: () => void;
-    children: React.ReactNode;
-  }) => (
-    <Tooltip title={label} placement="left">
-      <Box
-        role="button"
-        aria-label={label}
-        aria-pressed={active}
-        onClick={onClick}
-        sx={{
-          width: 36,
-          height: 36,
-          borderRadius: 1.5,
-          bgcolor: active ? "#4caf50" : "rgba(0,0,0,0.55)",
-          color: "#fff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: 2,
-          cursor: "pointer",
-          "&:hover": { bgcolor: active ? "#43a047" : "rgba(0,0,0,0.75)" },
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        {children}
-      </Box>
-    </Tooltip>
-  );
 
   // Close the sub-buttons when clicking outside or on Escape
   useEffect(() => {
@@ -102,13 +100,6 @@ export default function SceneModeSwitcher({ viewer }: Props) {
     };
   }, [open]);
 
-  const CurrentIcon = () => {
-    if (mode === SceneMode.SCENE2D) return <GridOnIcon fontSize="small" />;
-    if (mode === SceneMode.COLUMBUS_VIEW)
-      return <ViewWeekIcon fontSize="small" />;
-    return <ViewInArIcon fontSize="small" />; // default 3D
-  };
-
   // Build list of alternative modes (exclude current)
   const allModes = [
     {
@@ -127,7 +118,9 @@ export default function SceneModeSwitcher({ viewer }: Props) {
       icon: <ViewWeekIcon fontSize="small" />,
     },
   ];
-  const alternatives = allModes.filter((m) => m.id !== mode);
+  const alternatives = allModes.filter((m) => m.id !== currentMode);
+  const currentIcon =
+    allModes.find((m) => m.id === currentMode)?.icon ?? allModes[0].icon; // default 3D
 
   return (
     <Box
@@ -137,18 +130,16 @@ export default function SceneModeSwitcher({ viewer }: Props) {
         right: rightOffset,
         top: "50%",
         transform: "translateY(calc(-50% + 56px))", // slightly below the Layers button
-        zIndex: (theme) => (theme as any).zIndex.drawer + 2,
+        zIndex: (theme) => theme.zIndex.drawer + 2,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: 1,
         transition: (theme) =>
-          `right ${
-            (theme as any).transitions?.duration?.enteringScreen || 225
-          }ms ${
-            (theme as any).transitions?.easing?.easeOut ||
-            "cubic-bezier(0.0, 0, 0.2, 1)"
-          } `,
+          theme.transitions.create("right", {
+            duration: theme.transitions.duration.enteringScreen,
+            easing: theme.transitions.easing.easeOut,
+          }),
       }}
     >
       <Box
@@ -184,7 +175,7 @@ export default function SceneModeSwitcher({ viewer }: Props) {
               backdropFilter: "blur(2px)",
             }}
           >
-            <CurrentIcon />
+            {currentIcon}
           </Box>
         </Tooltip>
 

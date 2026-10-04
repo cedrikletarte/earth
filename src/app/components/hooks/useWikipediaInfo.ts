@@ -15,6 +15,26 @@ const PROVINCES = new Set([
   "Canada", "United States", "USA",
 ]);
 
+/** Raw `/api/rest_v1/page/summary` response (only the fields we read). */
+type RestSummaryResponse = WikiSummary & { type?: string };
+
+/** A page from the MediaWiki Action API `query` module (only the fields we read). */
+type WikiPage = {
+  pageid: number;
+  ns: number;
+  title: string;
+  extract?: string;
+  fullurl?: string;
+  thumbnail?: { source: string; width: number; height: number };
+  pageprops?: { disambiguation?: string };
+};
+
+type QueryPagesResponse = { query?: { pages?: Record<string, WikiPage> } };
+type GeoSearchResponse = { query?: { geosearch?: { pageid: number }[] } };
+type WikidataEntitiesResponse = {
+  entities?: Record<string, { sitelinks?: Record<string, { title: string }> }>;
+};
+
 interface Params {
   open: boolean;
   placeLabel?: string;
@@ -28,7 +48,7 @@ async function fetchRestSummary(lang: string, title: string): Promise<WikiSummar
   const url = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}?redirect=true`;
   const res = await fetch(url);
   if (!res.ok) return null;
-  const json = (await res.json()) as any;
+  const json = (await res.json()) as RestSummaryResponse | null;
   const isDisambig =
     json?.type === "disambiguation" ||
     /disambiguation/i.test(json?.description || "");
@@ -83,10 +103,7 @@ export function useWikipediaInfo({ open, placeLabel, lon, lat, wikidataId, wikip
   const candidates = useMemo(() => buildCandidates(placeLabel || ""), [placeLabel]);
 
   useEffect(() => {
-    if (!open || candidates.length === 0) {
-      setLoading(false);
-      return;
-    }
+    if (!open || candidates.length === 0) return;
 
     let cancelled = false;
     const langs = buildLangOrder(wikipediaTag);
@@ -102,10 +119,10 @@ export function useWikipediaInfo({ open, placeLabel, lon, lat, wikidataId, wikip
           const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${encodeURIComponent(wikidataId)}&props=sitelinks|labels&format=json&origin=*`;
           const res = await fetch(url);
           if (res.ok) {
-            const wd = (await res.json()) as any;
+            const wd = (await res.json()) as WikidataEntitiesResponse;
             const sitelinks = wd?.entities?.[wikidataId]?.sitelinks || {};
             for (const lang of langs) {
-              const title = sitelinks[`${lang}wiki`]?.title as string | undefined;
+              const title = sitelinks[`${lang}wiki`]?.title;
               if (!title) continue;
               const summary = await fetchRestSummary(lang, title);
               if (summary) {
@@ -139,13 +156,13 @@ export function useWikipediaInfo({ open, placeLabel, lon, lat, wikidataId, wikip
             const listUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${encodeURIComponent(`${lat}|${lon}`)}&gsradius=20000&gslimit=20&format=json&origin=*`;
             const listRes = await fetch(listUrl);
             if (!listRes.ok) continue;
-            const pageIds: number[] = ((await listRes.json()) as any)?.query?.geosearch?.map((i: any) => i.pageid).filter(Boolean) || [];
+            const pageIds: number[] = ((await listRes.json()) as GeoSearchResponse)?.query?.geosearch?.map((i) => i.pageid).filter(Boolean) || [];
             if (!pageIds.length) continue;
 
             const pagesUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&pageids=${pageIds.slice(0, 10).join("|")}&prop=pageimages|extracts|pageprops|info&inprop=url&exintro=1&explaintext=1&pithumbsize=800&format=json&origin=*`;
             const pagesRes = await fetch(pagesUrl);
             if (!pagesRes.ok) continue;
-            const pages = Object.values(((await pagesRes.json()) as any)?.query?.pages || {}) as any[];
+            const pages = Object.values(((await pagesRes.json()) as QueryPagesResponse)?.query?.pages || {});
             const pick = pages.find((p) => p?.ns === 0 && !p?.pageprops?.disambiguation) || pages[0];
             if (pick) {
               if (!cancelled) {
@@ -170,7 +187,7 @@ export function useWikipediaInfo({ open, placeLabel, lon, lat, wikidataId, wikip
           try {
             const res = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}?redirect=true`);
             if (!res.ok) continue;
-            const json = (await res.json()) as any;
+            const json = (await res.json()) as RestSummaryResponse | null;
             const isDisambig = json?.type === "disambiguation" || /disambiguation/i.test(json?.description || "");
             if (json && (json.extract || json.description) && !isDisambig) {
               if (!cancelled) {
@@ -192,7 +209,7 @@ export function useWikipediaInfo({ open, placeLabel, lon, lat, wikidataId, wikip
         const provinceToken = tokens.find((t) => PROVINCES.has(t));
         const searchTerms = Array.from(new Set([candidates[0], candidates[1], t0, t1, disambigHint?.title].filter(Boolean) as string[]));
 
-        const scorePage = (p: any): number => {
+        const scorePage = (p: WikiPage): number => {
           const title: string = p?.title || "";
           const extract: string = p?.extract || "";
           const lower = title.toLowerCase();
@@ -215,7 +232,7 @@ export function useWikipediaInfo({ open, placeLabel, lon, lat, wikidataId, wikip
             const url = `https://${lang}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(term)}&gsrlimit=10&prop=pageimages|extracts|pageprops&exintro=1&explaintext=1&pithumbsize=800&format=json&origin=*`;
             const res = await fetch(url);
             if (!res.ok) continue;
-            const pages = Object.values(((await res.json()) as any)?.query?.pages || {}) as any[];
+            const pages = Object.values(((await res.json()) as QueryPagesResponse)?.query?.pages || {});
             const articlePages = pages.filter((p) => p?.ns === 0).sort((a, b) => scorePage(b) - scorePage(a));
             const best = articlePages[0];
             if (best) {
@@ -241,7 +258,8 @@ export function useWikipediaInfo({ open, placeLabel, lon, lat, wikidataId, wikip
 
     run();
     return () => { cancelled = true; };
-  }, [open, candidates, lon, lat, wikidataId, wikipediaTag]);
+  }, [open, candidates, placeLabel, lon, lat, wikidataId, wikipediaTag]);
 
-  return { loading, error, data };
+  // A closed panel (or one with nothing to look up) is never loading, even if a fetch was cancelled mid-flight
+  return { loading: loading && open && candidates.length > 0, error, data };
 }

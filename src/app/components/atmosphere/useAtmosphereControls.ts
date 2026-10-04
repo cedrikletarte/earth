@@ -20,6 +20,7 @@ export function useAtmosphereControls(viewer: ViewerType | null) {
     const initializeAtmosphere = () => {
       try {
         // Set up initial atmosphere settings
+        // eslint-disable-next-line react-hooks/immutability -- Cesium's Viewer is an imperative handle, not React data
         const scene = viewer.scene;
         const globe = scene.globe;
 
@@ -167,10 +168,11 @@ function applyParameterChange<K extends keyof AtmosphereViewModel>(
       globe.atmosphereRayleighCoefficient.z = (value as number) * 1e-6;
       break;
 
-    case "groundAtmosphereMieCoefficient":
+    case "groundAtmosphereMieCoefficient": {
       const groundMieValue = (value as number) * 1e-6;
       globe.atmosphereMieCoefficient = new Cartesian3(groundMieValue, groundMieValue, groundMieValue);
       break;
+    }
 
     case "groundAtmosphereRayleighScaleHeight":
       globe.atmosphereRayleighScaleHeight = value as number;
@@ -232,10 +234,11 @@ function applyParameterChange<K extends keyof AtmosphereViewModel>(
       skyAtmosphere.atmosphereRayleighCoefficient.z = (value as number) * 1e-6;
       break;
 
-    case "skyAtmosphereMieCoefficient":
+    case "skyAtmosphereMieCoefficient": {
       const skyMieValue = (value as number) * 1e-6;
       skyAtmosphere.atmosphereMieCoefficient = new Cartesian3(skyMieValue, skyMieValue, skyMieValue);
       break;
+    }
 
     case "skyAtmosphereRayleighScaleHeight":
       skyAtmosphere.atmosphereRayleighScaleHeight = value as number;

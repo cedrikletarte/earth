@@ -1,5 +1,7 @@
 import { useRef, useCallback } from "react";
 import {
+  type Cartesian3,
+  type PolygonHierarchy,
   type Viewer as ViewerType,
   GeoJsonDataSource,
   Color,
@@ -7,6 +9,7 @@ import {
   ConstantProperty,
   PolylineDashMaterialProperty,
 } from "cesium";
+import type { NominatimDetails, PlaceGeometry } from "../search/nominatim";
 
 export function useBoundaryOverlay(
   viewerRef: React.RefObject<ViewerType | null>
@@ -14,7 +17,7 @@ export function useBoundaryOverlay(
   const boundaryDsRef = useRef<GeoJsonDataSource | null>(null);
 
   const applyStyle = useCallback(
-    async (label: string, geojson: any) => {
+    async (label: string, geojson: PlaceGeometry) => {
       const viewer = viewerRef.current;
       if (!viewer) return;
       try {
@@ -30,12 +33,10 @@ export function useBoundaryOverlay(
             ent.polygon.material = new ColorMaterialProperty(Color.TRANSPARENT);
             ent.polygon.outline = new ConstantProperty(false);
 
-            const hProp: any = ent.polygon.hierarchy;
-            const hierarchy: any = hProp?.getValue
-              ? hProp.getValue(viewer.clock.currentTime)
-              : hProp;
+            const hierarchy: PolygonHierarchy | undefined =
+              ent.polygon.hierarchy?.getValue(viewer.clock.currentTime);
 
-            const addRing = (positions: any[]) => {
+            const addRing = (positions: Cartesian3[]) => {
               if (!positions || positions.length < 2) return;
               const isClosed = positions[0] === positions[positions.length - 1];
               const ring = isClosed ? positions.slice() : [...positions, positions[0]];
@@ -50,10 +51,10 @@ export function useBoundaryOverlay(
                     gapColor: Color.TRANSPARENT,
                   }),
                 },
-              } as any);
+              });
             };
 
-            const walk = (ph: any) => {
+            const walk = (ph: PolygonHierarchy | undefined) => {
               if (!ph) return;
               addRing(ph.positions);
               if (Array.isArray(ph.holes)) ph.holes.forEach(walk);
@@ -81,7 +82,7 @@ export function useBoundaryOverlay(
   const drawBoundary = useCallback(
     async (
       label: string,
-      geometry?: any,
+      geometry?: PlaceGeometry,
       osmType?: string,
       osmId?: number
     ) => {
@@ -101,7 +102,7 @@ export function useBoundaryOverlay(
           const url = `${base}/details?osmtype=${osmType[0].toUpperCase()}&osmid=${osmId}&format=json&polygon_geojson=1`;
           const res = await fetch(url);
           if (res.ok) {
-            const json = await res.json();
+            const json: NominatimDetails = await res.json();
             const geom = json?.geometry ?? json?.geojson;
             if (geom) await applyStyle(label, geom);
           }

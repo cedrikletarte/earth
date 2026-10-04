@@ -11,6 +11,7 @@ import {
   Cartesian2,
   Cartographic,
   Math as CesiumMath,
+  PerspectiveFrustum,
 } from "cesium";
 
 export type MiniViewerProps = {
@@ -148,8 +149,8 @@ export default function MiniViewer({
 
     const sync = () => {
       if (mini.isDestroyed()) return;
-      const mainCam = mainViewer.camera as any;
-      const miniCam = mini.camera as any;
+      const mainCam = mainViewer.camera;
+      const miniCam = mini.camera;
 
       if (mini.scene.mode !== mainViewer.scene.mode) {
         if (mainViewer.scene.mode === SceneMode.SCENE3D) mini.scene.morphTo3D(0.0);
@@ -167,9 +168,13 @@ export default function MiniViewer({
         }
       } else {
         miniCam.setView({ destination: mainCam.position, orientation: { direction: mainCam.direction, up: mainCam.up } });
-        const mainFrustum: any = mainCam.frustum;
-        const miniFrustum: any = miniCam.frustum;
-        if (mainFrustum && miniFrustum && typeof mainFrustum.fov === "number") {
+        const mainFrustum = mainCam.frustum;
+        const miniFrustum = miniCam.frustum;
+        if (
+          mainFrustum instanceof PerspectiveFrustum &&
+          miniFrustum instanceof PerspectiveFrustum &&
+          typeof mainFrustum.fov === "number"
+        ) {
           miniFrustum.fov = mainFrustum.fov;
         }
       }

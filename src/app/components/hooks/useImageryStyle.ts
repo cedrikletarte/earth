@@ -18,7 +18,7 @@ export function useImageryStyle(viewer: ViewerType | null, styles: MapStyle[]) {
     } catch (e) {
       console.warn("Failed to apply imagery style:", e);
     }
-  }, [viewer, selectedStyleKey]);
+  }, [viewer, styles, selectedStyleKey]);
 
   return { selectedStyleKey, setSelectedStyleKey };
 }

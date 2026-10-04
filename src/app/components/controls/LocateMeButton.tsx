@@ -14,7 +14,7 @@ import {
   Math as CesiumMath,
   SceneMode,
 } from "cesium";
-import { useRightDockOffset } from "./RightDockContext";
+import { useRightDockOffset } from "./rightDock";
 
 type Props = {
   viewer: ViewerType | null;
@@ -37,15 +37,15 @@ export default function LocateMeButton({ viewer }: Props) {
       setErrorMsg("The geolocation is not available in this browser.");
       return;
     }
-    if (!(window as any).isSecureContext) {
+    if (!window.isSecureContext) {
       // Most browsers require HTTPS (or localhost) for geolocation
       setErrorMsg("Geolocation requires a secure origin (HTTPS).");
       return;
     }
     // If Permissions API is available, surface denied early with guidance
-    if ((navigator as any).permissions?.query) {
+    if (navigator.permissions?.query) {
       try {
-        (navigator as any).permissions
+        navigator.permissions
           .query({ name: "geolocation" as PermissionName })
           .then((status: PermissionStatus) => {
             if (status.state === "denied") {
@@ -55,7 +55,7 @@ export default function LocateMeButton({ viewer }: Props) {
             }
           })
           .catch(() => {});
-      } catch {}
+      } catch { /* ignore */ }
     }
     setLocating(true);
     const moveCamera = (lat: number, lon: number) => {
@@ -88,7 +88,7 @@ export default function LocateMeButton({ viewer }: Props) {
               ),
             });
             viewer.scene.requestRender();
-          } catch {}
+          } catch { /* ignore */ }
         }, 1400);
       } finally {
         setLocating(false);
@@ -120,7 +120,7 @@ export default function LocateMeButton({ viewer }: Props) {
           },
           opts
         );
-        const t = setTimeout(() => {
+        setTimeout(() => {
           if (settled) return;
           settled = true;
           navigator.geolocation.clearWatch(id);
@@ -138,7 +138,7 @@ export default function LocateMeButton({ viewer }: Props) {
         });
         moveCamera(clampLat(pos.coords.latitude), pos.coords.longitude);
         return;
-      } catch (err: any) {
+      } catch (err) {
         console.warn("Geolocation (high accuracy) error:", err);
       }
 
@@ -151,7 +151,7 @@ export default function LocateMeButton({ viewer }: Props) {
         });
         moveCamera(clampLat(pos2.coords.latitude), pos2.coords.longitude);
         return;
-      } catch (err: any) {
+      } catch (err) {
         console.warn("Geolocation (low accuracy) error:", err);
       }
 
@@ -163,7 +163,7 @@ export default function LocateMeButton({ viewer }: Props) {
         );
         moveCamera(clampLat(pos3.coords.latitude), pos3.coords.longitude);
         return;
-      } catch (e) {
+      } catch {
         setErrorMsg(
           "Geolocation position unavailable. Please enable GPS/Wi-Fi, come back later, and try again."
         );
@@ -180,14 +180,12 @@ export default function LocateMeButton({ viewer }: Props) {
           position: "fixed",
           right: rightOffset,
           bottom: 76, // stacked above Home button (44 + 8 + 24)
-          zIndex: (theme) => (theme as any).zIndex.drawer + 2,
+          zIndex: (theme) => theme.zIndex.drawer + 2,
           transition: (theme) =>
-            `right ${
-              (theme as any).transitions?.duration?.enteringScreen || 225
-            }ms ${
-              (theme as any).transitions?.easing?.easeOut ||
-              "cubic-bezier(0.0, 0, 0.2, 1)"
-            }`,
+            theme.transitions.create("right", {
+              duration: theme.transitions.duration.enteringScreen,
+              easing: theme.transitions.easing.easeOut,
+            }),
         }}
       >
         <Tooltip title="My position" placement="left">

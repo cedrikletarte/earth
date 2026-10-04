@@ -10,7 +10,6 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  Divider,
   IconButton,
   CircularProgress,
   InputAdornment,
@@ -22,6 +21,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import type { NominatimSearchItem, PlaceGeometry } from "./nominatim";
 
 type SearchResult = {
   label: string;
@@ -29,19 +29,36 @@ type SearchResult = {
   lat: number;
   osm_type?: string;
   osm_id?: number;
-  geojson?: any;
-  extratags?: any;
+  geojson?: PlaceGeometry;
+  extratags?: Record<string, string> | null;
   wikidata?: string;
   wikipedia?: string; // like "en:Montreal"
 };
 type HistoryItem = SearchResult & { ts: number };
+
+const HISTORY_KEY = "search-history";
+
+function loadHistory(): HistoryItem[] {
+  const saved = localStorage.getItem(HISTORY_KEY);
+  if (!saved) return [];
+  try {
+    return JSON.parse(saved);
+  } catch (error) {
+    console.warn("Failed to parse search history:", error);
+    return [];
+  }
+}
+
+function toHistoryItem(item: SearchResult): HistoryItem {
+  return { ...item, ts: Date.now() };
+}
 
 export interface TopSearchBarProps {
   onSelectLocation: (lon: number, lat: number) => void;
   onSelectPlace?: (
     label: string,
     extras?: {
-      geometry?: any | null;
+      geometry?: PlaceGeometry;
       osmType?: string;
       osmId?: number;
       lon?: number;
@@ -59,34 +76,20 @@ export default function TopSearchBar({
   const [query, setQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [showResults, setShowResults] = useState<boolean>(false);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>(loadHistory);
   const [focused, setFocused] = useState<boolean>(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load search history from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("search-history");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setHistory(parsed);
-      } catch (error) {
-        console.warn("Failed to parse search history:", error);
-      }
-    }
-  }, []);
-
   // Save history to localStorage
   const saveHistory = (newHistory: HistoryItem[]) => {
     setHistory(newHistory);
-    localStorage.setItem("search-history", JSON.stringify(newHistory));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
   };
 
   // Add item to history
   const addToHistory = (item: SearchResult) => {
-    const historyItem: HistoryItem = { ...item, ts: Date.now() };
+    const historyItem = toHistoryItem(item);
     const newHistory = [
       historyItem,
       ...history.filter((h) => h.label !== item.label),
@@ -109,12 +112,10 @@ export default function TopSearchBar({
   const performSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults([]);
-      setShowResults(false);
       return;
     }
 
     setLoading(true);
-    setShowResults(true);
 
     try {
       const base = import.meta.env.VITE_NOMINATIM_BASE_URL;
@@ -125,8 +126,8 @@ export default function TopSearchBar({
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const data = await res.json();
-      const formatted: SearchResult[] = data.map((item: any) => ({
+      const data: NominatimSearchItem[] = await res.json();
+      const formatted: SearchResult[] = data.map((item) => ({
         label: item.display_name,
         lon: parseFloat(item.lon),
         lat: parseFloat(item.lat),
@@ -174,7 +175,6 @@ export default function TopSearchBar({
     }
 
     setQuery("");
-    setShowResults(false);
     setFocused(false);
     inputRef.current?.blur();
   };
@@ -186,8 +186,7 @@ export default function TopSearchBar({
         searchRef.current &&
         !searchRef.current.contains(event.target as Node)
       ) {
-        setShowResults(false);
-        setFocused(false);
+            setFocused(false);
       }
     };
 
@@ -197,8 +196,7 @@ export default function TopSearchBar({
         searchRef.current &&
         !searchRef.current.contains(event.target as Node)
       ) {
-        setShowResults(false);
-        setFocused(false);
+            setFocused(false);
       }
     };
 

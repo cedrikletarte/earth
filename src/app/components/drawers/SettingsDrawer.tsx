@@ -9,6 +9,7 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import CloseIcon from "@mui/icons-material/Close";
 import AtmosphereControls from "../atmosphere/AtmosphereControls";
+import type { Viewer } from "cesium";
 import type { AtmosphereViewModel } from "../atmosphere/types";
 
 interface SettingsDrawerProps {
@@ -17,7 +18,7 @@ interface SettingsDrawerProps {
     key: K,
     value: AtmosphereViewModel[K]
   ) => void;
-  viewer?: any;
+  viewer?: Viewer | null;
 }
 
 export default function SettingsDrawer({
@@ -38,7 +39,7 @@ export default function SettingsDrawer({
           top: "50%",
           left: open ? 360 : 0,
           transform: "translateY(-50%)",
-          zIndex: (theme) => (theme as any).zIndex.drawer + 1,
+          zIndex: (theme) => theme.zIndex.drawer + 1,
           backgroundColor: "rgba(255,255,255,0.9)",
           boxShadow: 2,
           borderRadius: "0 8px 8px 0",
@@ -46,12 +47,10 @@ export default function SettingsDrawer({
           height: 64,
           "&:hover": { backgroundColor: "rgba(255,255,255,1)" },
           transition: (theme) =>
-            `left ${
-              (theme as any).transitions?.duration?.enteringScreen || 225
-            }ms ${
-              (theme as any).transitions?.easing?.easeOut ||
-              "cubic-bezier(0.0, 0, 0.2, 1)"
-            }`,
+            theme.transitions.create("left", {
+              duration: theme.transitions.duration.enteringScreen,
+              easing: theme.transitions.easing.easeOut,
+            }),
         }}
       >
         <Box

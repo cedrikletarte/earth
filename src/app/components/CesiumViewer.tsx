@@ -9,6 +9,7 @@ import CityInfoPanel from "./CityInfoPanel";
 import SettingsDrawer from "./drawers/SettingsDrawer";
 import MapStyleDrawer, { type MapStyle } from "./drawers/MapStyleDrawer";
 import RightControls from "./controls/RightControls";
+import type { PlaceGeometry } from "./search/nominatim";
 
 const tileProvider = (style: string) =>
   new UrlTemplateImageryProvider({
@@ -58,7 +59,7 @@ export default function CesiumViewer() {
     async (
       label: string,
       extras?: {
-        geometry?: any;
+        geometry?: PlaceGeometry;
         osmType?: string;
         osmId?: number;
         lon?: number;

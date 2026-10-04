@@ -5,7 +5,7 @@ import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import { type Viewer as ViewerType } from "cesium";
-import { useRightDockOffset } from "./RightDockContext";
+import { useRightDockOffset } from "./rightDock";
 
 type Props = {
   viewer: ViewerType | null;
@@ -19,7 +19,7 @@ export default function HomeViewButton({ viewer }: Props) {
     if (!viewer) return;
     try {
       viewer.camera.flyHome(1.2);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   return (
@@ -29,14 +29,12 @@ export default function HomeViewButton({ viewer }: Props) {
         position: "fixed",
         right: rightOffset,
         bottom: 24,
-        zIndex: (theme) => (theme as any).zIndex.drawer + 2,
+        zIndex: (theme) => theme.zIndex.drawer + 2,
         transition: (theme) =>
-          `right ${
-            (theme as any).transitions?.duration?.enteringScreen || 225
-          }ms ${
-            (theme as any).transitions?.easing?.easeOut ||
-            "cubic-bezier(0.0, 0, 0.2, 1)"
-          }`,
+          theme.transitions.create("right", {
+            duration: theme.transitions.duration.enteringScreen,
+            easing: theme.transitions.easing.easeOut,
+          }),
       }}
     >
       <Tooltip title="Home view" placement="left">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Viewer,
+  OrthographicOffCenterFrustum,
   type Viewer as ViewerType,
   SkyBox,
   WebMercatorProjection,
@@ -51,10 +52,10 @@ export function useCesiumViewer(
     const clampCamera2D = () => {
       const scene = v.scene;
       if (scene.mode !== SceneMode.SCENE2D) return;
-      const camera = scene.camera as any;
-      const frustum: any = camera.frustum;
+      const camera = scene.camera;
+      const frustum = camera.frustum;
       if (
-        frustum == null ||
+        !(frustum instanceof OrthographicOffCenterFrustum) ||
         typeof frustum.left !== "number" ||
         typeof frustum.right !== "number" ||
         typeof frustum.top !== "number" ||
@@ -108,7 +109,7 @@ export function useCesiumViewer(
         setViewer(null);
       }
     };
-  }, []);
+  }, [containerRef]);
 
   return { viewer, viewerRef };
 }

@@ -1,13 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState } from "react";
-
-type Ctx = { rightOffset: number; setRightOffset: (n: number) => void };
-
-const RightDockContext = createContext<Ctx>({
-  rightOffset: 0,
-  setRightOffset: () => {},
-});
+import React, { useMemo, useState } from "react";
+import { RightDockContext } from "./rightDock";
 
 export function RightDockProvider({ children }: { children: React.ReactNode }) {
   const [rightOffset, setRightOffset] = useState(0);
@@ -17,12 +11,4 @@ export function RightDockProvider({ children }: { children: React.ReactNode }) {
       {children}
     </RightDockContext.Provider>
   );
-}
-
-export function useRightDockOffset() {
-  return useContext(RightDockContext).rightOffset;
-}
-
-export function useSetRightDockOffset() {
-  return useContext(RightDockContext).setRightOffset;
 }

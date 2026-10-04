@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import Box from "@mui/material/Box";
 import { Tooltip } from "@mui/material";
 import Drawer from "@mui/material/Drawer";
@@ -7,7 +7,7 @@ import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import LayersIcon from "@mui/icons-material/Layers";
 import { type ImageryProvider, type Viewer as ViewerType } from "cesium";
-import { useRightDockOffset, useSetRightDockOffset } from "../controls/RightDockContext";
+import { useRightDockOffset, useSetRightDockOffset } from "../controls/rightDock";
 import MiniViewer from "./MiniViewer";
 
 export type MapStyle = {
@@ -35,9 +35,11 @@ export default function MapStyleDrawer({
   const rightOffset = useRightDockOffset();
   const setRightOffset = useSetRightDockOffset();
 
+  const notifyOpenChange = useEffectEvent((isOpen: boolean) => onOpenChange?.(isOpen));
+
   useEffect(() => {
     setRightOffset(open ? 300 : 0);
-    onOpenChange?.(open);
+    notifyOpenChange(open);
     return () => setRightOffset(0);
   }, [open, setRightOffset]);
 
@@ -50,9 +52,12 @@ export default function MapStyleDrawer({
             right: rightOffset,
             top: "50%",
             transform: "translateY(-50%)",
-            zIndex: (theme) => (theme as any).zIndex.drawer + 2,
+            zIndex: (theme) => theme.zIndex.drawer + 2,
             transition: (theme) =>
-              `right ${(theme as any).transitions?.duration?.enteringScreen || 225}ms ${(theme as any).transitions?.easing?.easeOut || "cubic-bezier(0.0, 0, 0.2, 1)"}`,
+              theme.transitions.create("right", {
+                duration: theme.transitions.duration.enteringScreen,
+                easing: theme.transitions.easing.easeOut,
+              }),
           }}
         >
           <Box
