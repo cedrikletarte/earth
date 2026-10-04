@@ -6,15 +6,13 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import LayersIcon from "@mui/icons-material/Layers";
-import { type ImageryProvider, type Viewer as ViewerType } from "cesium";
+import { type Viewer as ViewerType } from "cesium";
+import TextField from "@mui/material/TextField";
+import type { MapStyle } from "../imagery/styles";
+import { GIBS_MIN_DATE, defaultGibsDate } from "../imagery/gibs";
 import { useRightDockOffset, useSetRightDockOffset } from "../controls/rightDock";
 import MiniViewer from "./MiniViewer";
 
-export type MapStyle = {
-  key: string;
-  name: string;
-  createProvider: () => ImageryProvider;
-};
 
 type MapStyleDrawerProps = {
   viewer: ViewerType | null;
@@ -22,6 +20,14 @@ type MapStyleDrawerProps = {
   selectedKey: string | null;
   onSelect: (key: string) => void;
   onOpenChange?: (open: boolean) => void;
+  /** Day shown by the dated NASA styles (YYYY-MM-DD) */
+  nasaDate: string;
+  onNasaDateChange: (date: string) => void;
+};
+
+const GROUP_TITLES: Record<MapStyle["group"], string> = {
+  Map: "Map styles",
+  NASA: "NASA imagery",
 };
 
 export default function MapStyleDrawer({
@@ -30,8 +36,11 @@ export default function MapStyleDrawer({
   selectedKey,
   onSelect,
   onOpenChange,
+  nasaDate,
+  onNasaDateChange,
 }: MapStyleDrawerProps) {
   const [open, setOpen] = useState(false);
+  const [maxNasaDate] = useState(defaultGibsDate);
   const rightOffset = useRightDockOffset();
   const setRightOffset = useSetRightDockOffset();
 
@@ -95,49 +104,74 @@ export default function MapStyleDrawer({
       >
         <Box sx={{ p: 2, width: "100%", boxSizing: "border-box", height: "100%", overflowY: "auto" }}>
           <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-            <Typography variant="h6" sx={{ flex: 1 }}>Map styles</Typography>
+            <Typography variant="h6" sx={{ flex: 1 }}>Layers</Typography>
             <IconButton aria-label="close layers" onClick={() => setOpen(false)} size="small">
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
-          {styles.map((s) => (
-            <Box key={s.key} sx={{ mb: 1.5 }}>
-              <Box
-                onClick={() => { onSelect(s.key); setOpen(false); }}
-                sx={{
-                  position: "relative",
-                  cursor: "pointer",
-                  borderRadius: 3,
-                  overflow: "hidden",
-                  boxShadow: 0,
-                  transition: "box-shadow 120ms ease",
-                  width: 260,
-                  mx: "auto",
-                }}
-              >
-                <MiniViewer
-                  mainViewer={viewer}
-                  createProvider={s.createProvider}
-                  width={260}
-                  height={90}
-                  rounded
-                  selected={selectedKey === s.key}
-                  active={open}
-                />
-                <Box
-                  sx={{
-                    position: "absolute",
-                    top: 6,
-                    left: 6,
-                    px: 0.75,
-                    py: 0.25,
-                    bgcolor: "rgba(0,0,0,0.6)",
-                    borderRadius: 3,
+          {(Object.keys(GROUP_TITLES) as MapStyle["group"][]).map((group) => (
+            <Box key={group} sx={{ mb: 2 }}>
+              <Typography variant="overline" color="textSecondary" sx={{ display: "block", fontWeight: "bold" }}>
+                {GROUP_TITLES[group]}
+              </Typography>
+              {group === "NASA" && (
+                <TextField
+                  type="date"
+                  size="small"
+                  fullWidth
+                  label="Imagery date"
+                  value={nasaDate}
+                  onChange={(e) => {
+                    // Cleared or partially typed dates come through as ""
+                    if (e.target.value) onNasaDateChange(e.target.value);
                   }}
-                >
-                  <Typography variant="caption" color="#fff">{s.name}</Typography>
+                  slotProps={{
+                    inputLabel: { shrink: true },
+                    htmlInput: { min: GIBS_MIN_DATE, max: maxNasaDate },
+                  }}
+                  sx={{ mb: 1.5 }}
+                />
+              )}
+              {styles.filter((s) => s.group === group).map((s) => (
+                <Box key={s.key} sx={{ mb: 1.5 }}>
+                  <Box
+                    onClick={() => { onSelect(s.key); setOpen(false); }}
+                    sx={{
+                      position: "relative",
+                      cursor: "pointer",
+                      borderRadius: 3,
+                      overflow: "hidden",
+                      boxShadow: 0,
+                      transition: "box-shadow 120ms ease",
+                      width: 260,
+                      mx: "auto",
+                    }}
+                  >
+                    <MiniViewer
+                      mainViewer={viewer}
+                      createProviders={s.createProviders}
+                      width={260}
+                      height={90}
+                      rounded
+                      selected={selectedKey === s.key}
+                      active={open}
+                    />
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 6,
+                        left: 6,
+                        px: 0.75,
+                        py: 0.25,
+                        bgcolor: "rgba(0,0,0,0.6)",
+                        borderRadius: 3,
+                      }}
+                    >
+                      <Typography variant="caption" color="#fff">{s.name}</Typography>
+                    </Box>
+                  </Box>
                 </Box>
-              </Box>
+              ))}
             </Box>
           ))}
         </Box>

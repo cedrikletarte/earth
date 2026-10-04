@@ -16,7 +16,7 @@ import {
 
 export type MiniViewerProps = {
   mainViewer: ViewerType | null;
-  createProvider: () => ImageryProvider;
+  createProviders: () => ImageryProvider[];
   width: number | string;
   height: number;
   rounded?: boolean;
@@ -124,7 +124,7 @@ function syncMiniToMain(mini: ViewerType, mainViewer: ViewerType) {
 
 export default function MiniViewer({
   mainViewer,
-  createProvider,
+  createProviders,
   width,
   height,
   rounded,
@@ -170,7 +170,7 @@ export default function MiniViewer({
 
       try {
         mini.imageryLayers.removeAll();
-        mini.imageryLayers.addImageryProvider(createProvider());
+        for (const provider of createProviders()) mini.imageryLayers.addImageryProvider(provider);
       } catch { /* ignore */ }
 
       miniRef.current = mini;
@@ -178,11 +178,11 @@ export default function MiniViewer({
       try {
         const layers = miniRef.current.imageryLayers;
         layers.removeAll();
-        layers.addImageryProvider(createProvider());
+        for (const provider of createProviders()) layers.addImageryProvider(provider);
       } catch { /* ignore */ }
     }
 
-  }, [mainViewer, createProvider]);
+  }, [mainViewer, createProviders]);
 
   // Follow the main camera only while visible: every sync re-renders this mini globe
   useEffect(() => {
