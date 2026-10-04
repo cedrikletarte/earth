@@ -8,6 +8,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import LayersIcon from "@mui/icons-material/Layers";
 import { type Viewer as ViewerType } from "cesium";
 import TextField from "@mui/material/TextField";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
 import type { MapStyle } from "../imagery/styles";
 import { GIBS_MIN_DATE, defaultGibsDate } from "../imagery/gibs";
 import { useRightDockOffset, useSetRightDockOffset } from "../controls/rightDock";
@@ -23,6 +25,11 @@ type MapStyleDrawerProps = {
   /** Day shown by the dated NASA styles (YYYY-MM-DD) */
   nasaDate: string;
   onNasaDateChange: (date: string) => void;
+  /** City lights overlay on the night side, whatever the base style */
+  nightLights: boolean;
+  onNightLightsChange: (enabled: boolean) => void;
+  /** False in 2D/Columbus or with globe lighting off, where the overlay can't be drawn */
+  nightLightsAvailable: boolean;
 };
 
 const GROUP_TITLES: Record<MapStyle["group"], string> = {
@@ -38,6 +45,9 @@ export default function MapStyleDrawer({
   onOpenChange,
   nasaDate,
   onNasaDateChange,
+  nightLights,
+  onNightLightsChange,
+  nightLightsAvailable,
 }: MapStyleDrawerProps) {
   const [open, setOpen] = useState(false);
   const [maxNasaDate] = useState(defaultGibsDate);
@@ -129,8 +139,28 @@ export default function MapStyleDrawer({
                     inputLabel: { shrink: true },
                     htmlInput: { min: GIBS_MIN_DATE, max: maxNasaDate },
                   }}
-                  sx={{ mb: 1.5 }}
+                  sx={{ mb: 1 }}
                 />
+              )}
+              {group === "NASA" && (
+                <Box sx={{ mb: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={nightLights}
+                        disabled={!nightLightsAvailable}
+                        onChange={(e) => onNightLightsChange(e.target.checked)}
+                      />
+                    }
+                    label={<Typography variant="body2">City lights on the night side</Typography>}
+                  />
+                  {!nightLightsAvailable && (
+                    <Typography variant="caption" color="textSecondary" sx={{ display: "block" }}>
+                      Needs the 3D view with globe lighting enabled.
+                    </Typography>
+                  )}
+                </Box>
               )}
               {styles.filter((s) => s.group === group).map((s) => (
                 <Box key={s.key} sx={{ mb: 1.5 }}>

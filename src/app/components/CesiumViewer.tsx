@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Cartesian3, Math as CesiumMath, Rectangle } from "cesium";
+import { Cartesian3, Math as CesiumMath, Rectangle, SceneMode } from "cesium";
 import { useCesiumViewer } from "./hooks/useCesiumViewer";
 import { useImageryStyle } from "./hooks/useImageryStyle";
 import { useBoundaryOverlay } from "./hooks/useBoundaryOverlay";
+import { useNightLights } from "./hooks/useNightLights";
+import { useSceneMode } from "./hooks/useSceneMode";
 import { useAtmosphereControls } from "./atmosphere/useAtmosphereControls";
 import TopSearchBar from "./search/TopSearchBar";
 import CityInfoPanel from "./CityInfoPanel";
@@ -25,6 +27,12 @@ export default function CesiumViewer() {
   const { selectedStyleKey, setSelectedStyleKey } = useImageryStyle(viewer, styles);
   const { drawBoundary } = useBoundaryOverlay(viewerRef);
   const { viewModel: atmosphereViewModel, updateParameter: updateAtmosphereParameter } = useAtmosphereControls(viewer);
+
+  const [nightLightsEnabled, setNightLightsEnabled] = useState(true);
+  const sceneMode = useSceneMode(viewer);
+  // Day/night blending needs the lit 3D globe (see useNightLights)
+  const nightLightsAvailable = sceneMode === SceneMode.SCENE3D && !!atmosphereViewModel?.enableLighting;
+  useNightLights(viewer, nightLightsEnabled && nightLightsAvailable);
 
   const [infoOpen, setInfoOpen] = useState(false);
   const [selectedPlaceLabel, setSelectedPlaceLabel] = useState<string | undefined>(undefined);
@@ -91,6 +99,9 @@ export default function CesiumViewer() {
           onSelect={setSelectedStyleKey}
           nasaDate={nasaDate}
           onNasaDateChange={setNasaDate}
+          nightLights={nightLightsEnabled}
+          onNightLightsChange={setNightLightsEnabled}
+          nightLightsAvailable={nightLightsAvailable}
           onOpenChange={(open) => { if (open) setInfoOpen(false); }}
         />
       </RightControls>

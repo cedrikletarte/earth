@@ -25,8 +25,9 @@ export const GIBS_LAYERS = {
   coastlines: { id: "Coastlines_15m", format: "png", maxLevel: 13 },
 } satisfies Record<string, GibsLayer>;
 
-export function createGibsProvider(layer: GibsLayer, date: string) {
-  const time = layer.time === "daily" ? date : layer.time ?? "default";
+/** `date` (YYYY-MM-DD) is only used by daily layers; without it they show GIBS's latest day. */
+export function createGibsProvider(layer: GibsLayer, date?: string) {
+  const time = layer.time === "daily" ? date ?? "default" : layer.time ?? "default";
   return new UrlTemplateImageryProvider({
     // GIBS REST tiles are addressed TileMatrix/TileRow/TileCol, i.e. z/y/x
     url: `${GIBS_URL}/${layer.id}/default/${time}/GoogleMapsCompatible_Level${layer.maxLevel}/{z}/{y}/{x}.${layer.format}`,
