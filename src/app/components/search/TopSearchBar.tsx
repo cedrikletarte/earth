@@ -42,14 +42,18 @@ function loadHistory(): HistoryItem[] {
   const saved = localStorage.getItem(HISTORY_KEY);
   if (!saved) return [];
   try {
-    return JSON.parse(saved);
+    const items: (HistoryItem & { geojson?: unknown })[] = JSON.parse(saved);
+    // Drop geometry stored by older versions
+    return items.map(({ geojson, ...item }) => item);
   } catch (error) {
     console.warn("Failed to parse search history:", error);
     return [];
   }
 }
 
-function toHistoryItem(item: SearchResult): HistoryItem {
+// Geometry is left out: country polygons can weigh several MB and overflow localStorage.
+// Selecting a history item refetches the boundary from Nominatim via osm_type/osm_id instead.
+function toHistoryItem({ geojson, ...item }: SearchResult): HistoryItem {
   return { ...item, ts: Date.now() };
 }
 
@@ -84,7 +88,11 @@ export default function TopSearchBar({
   // Save history to localStorage
   const saveHistory = (newHistory: HistoryItem[]) => {
     setHistory(newHistory);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    } catch (error) {
+      console.warn("Failed to save search history:", error);
+    }
   };
 
   // Add item to history
