@@ -44,6 +44,7 @@ export default function MiniViewer({
       hiddenCredits.style.display = "none";
 
       const mini = new Viewer(el, {
+        baseLayer: false,
         baseLayerPicker: false,
         animation: false,
         timeline: false,
