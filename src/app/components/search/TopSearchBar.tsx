@@ -20,6 +20,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import type { NominatimSearchItem, PlaceGeometry } from "./nominatim";
+import type { BBox } from "../geo";
 
 type SearchResult = {
   label: string;
@@ -27,6 +28,7 @@ type SearchResult = {
   lat: number;
   osm_type?: string;
   osm_id?: number;
+  bbox?: BBox;
   geojson?: PlaceGeometry;
   extratags?: Record<string, string> | null;
   wikidata?: string;
@@ -56,7 +58,7 @@ function toHistoryItem({ geojson, ...item }: SearchResult): HistoryItem {
 }
 
 export interface TopSearchBarProps {
-  onSelectLocation: (lon: number, lat: number) => void;
+  onSelectLocation: (lon: number, lat: number, bbox?: BBox) => void;
   onSelectPlace?: (
     label: string,
     extras?: {
@@ -140,6 +142,12 @@ export default function TopSearchBar({
         lat: parseFloat(item.lat),
         osm_type: item.osm_type,
         osm_id: item.osm_id,
+        bbox: item.boundingbox && {
+          south: parseFloat(item.boundingbox[0]),
+          north: parseFloat(item.boundingbox[1]),
+          west: parseFloat(item.boundingbox[2]),
+          east: parseFloat(item.boundingbox[3]),
+        },
         geojson: item.geojson,
         extratags: item.extratags,
         wikidata: item.extratags?.wikidata,
@@ -173,7 +181,7 @@ export default function TopSearchBar({
   // Handle item selection
   const handleItemSelect = (item: SearchResult) => {
     addToHistory(item);
-    onSelectLocation(item.lon, item.lat);
+    onSelectLocation(item.lon, item.lat, item.bbox);
 
     if (onSelectPlace) {
       onSelectPlace(item.label, {

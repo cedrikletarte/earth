@@ -12,6 +12,8 @@ export type NominatimSearchItem = {
   lat: string;
   osm_type?: string;
   osm_id?: number;
+  /** [south, north, west, east] in degrees */
+  boundingbox?: [string, string, string, string];
   geojson?: PlaceGeometry;
   extratags?: Record<string, string> | null;
 };

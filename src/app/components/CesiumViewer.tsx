@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Cartesian3, Math as CesiumMath, UrlTemplateImageryProvider, WebMercatorProjection, WebMercatorTilingScheme } from "cesium";
+import { Cartesian3, Math as CesiumMath, Rectangle, UrlTemplateImageryProvider, WebMercatorTilingScheme } from "cesium";
 import { useCesiumViewer } from "./hooks/useCesiumViewer";
 import { useImageryStyle } from "./hooks/useImageryStyle";
 import { useBoundaryOverlay } from "./hooks/useBoundaryOverlay";
@@ -10,6 +10,10 @@ import SettingsDrawer from "./drawers/SettingsDrawer";
 import MapStyleDrawer, { type MapStyle } from "./drawers/MapStyleDrawer";
 import RightControls from "./controls/RightControls";
 import type { PlaceGeometry } from "./search/nominatim";
+import { clampToMercatorLat, type BBox } from "./geo";
+
+// Places smaller than this (degrees) are framed from a fixed altitude instead of their bounds
+const MIN_FRAMED_SPAN_DEG = 0.1;
 
 const tileProvider = (style: string) =>
   new UrlTemplateImageryProvider({
@@ -43,13 +47,16 @@ export default function CesiumViewer() {
     wikipediaTag?: string;
   } | undefined>(undefined);
 
-  const flyTo = (lon: number, lat: number) => {
+  const flyTo = (lon: number, lat: number, bbox?: BBox) => {
     const v = viewerRef.current;
     if (!v) return;
-    const maxLatDeg = (WebMercatorProjection.MaximumLatitude * 180) / Math.PI;
-    const safeLat = Math.max(-maxLatDeg, Math.min(maxLatDeg, lat));
+    // Frame large places (regions, countries) by their bounds, small ones from 10 km up
+    const framed =
+      bbox && Math.max(bbox.north - bbox.south, Math.abs(bbox.east - bbox.west)) >= MIN_FRAMED_SPAN_DEG;
     v.camera.flyTo({
-      destination: Cartesian3.fromDegrees(lon, safeLat, 10000),
+      destination: framed
+        ? Rectangle.fromDegrees(bbox.west, clampToMercatorLat(bbox.south), bbox.east, clampToMercatorLat(bbox.north))
+        : Cartesian3.fromDegrees(lon, clampToMercatorLat(lat), 10000),
       orientation: { heading: 0, pitch: CesiumMath.toRadians(-90), roll: 0 },
       duration: 3.5,
     });

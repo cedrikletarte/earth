@@ -7,12 +7,12 @@ import Button from "@mui/material/Button";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import {
   type Viewer as ViewerType,
-  WebMercatorProjection,
   Cartesian3,
   Math as CesiumMath,
   SceneMode,
 } from "cesium";
 import { useRightDockOffset } from "./rightDock";
+import { clampToMercatorLat } from "../geo";
 
 type Props = {
   viewer: ViewerType | null;
@@ -22,11 +22,6 @@ export default function LocateMeButton({ viewer }: Props) {
   const rightOffset = useRightDockOffset();
   const [locating, setLocating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const clampLat = (lat: number) => {
-    const maxLatDeg = (WebMercatorProjection.MaximumLatitude * 180) / Math.PI;
-    return Math.max(-maxLatDeg, Math.min(maxLatDeg, lat));
-  };
 
   const goToMyLocation = () => {
     if (!viewer) return;
@@ -75,18 +70,6 @@ export default function LocateMeButton({ viewer }: Props) {
           });
         }
         viewer.scene.requestRender();
-        setTimeout(() => {
-          try {
-            viewer.camera.setView({
-              destination: Cartesian3.fromDegrees(
-                lon,
-                lat,
-                is3D ? 8000 : 10000
-              ),
-            });
-            viewer.scene.requestRender();
-          } catch { /* ignore */ }
-        }, 1400);
       } finally {
         setLocating(false);
       }
@@ -133,7 +116,7 @@ export default function LocateMeButton({ viewer }: Props) {
           timeout: 10000,
           maximumAge: 0,
         });
-        moveCamera(clampLat(pos.coords.latitude), pos.coords.longitude);
+        moveCamera(clampToMercatorLat(pos.coords.latitude), pos.coords.longitude);
         return;
       } catch (err) {
         console.warn("Geolocation (high accuracy) error:", err);
@@ -146,7 +129,7 @@ export default function LocateMeButton({ viewer }: Props) {
           timeout: 8000,
           maximumAge: 5 * 60 * 1000,
         });
-        moveCamera(clampLat(pos2.coords.latitude), pos2.coords.longitude);
+        moveCamera(clampToMercatorLat(pos2.coords.latitude), pos2.coords.longitude);
         return;
       } catch (err) {
         console.warn("Geolocation (low accuracy) error:", err);
@@ -158,7 +141,7 @@ export default function LocateMeButton({ viewer }: Props) {
           { enableHighAccuracy: true, maximumAge: 0 },
           15000
         );
-        moveCamera(clampLat(pos3.coords.latitude), pos3.coords.longitude);
+        moveCamera(clampToMercatorLat(pos3.coords.latitude), pos3.coords.longitude);
         return;
       } catch {
         setErrorMsg(
