@@ -115,9 +115,10 @@ export default function TopSearchBar({
   };
 
   // Search function
-  const performSearch = async (searchQuery: string) => {
+  const performSearch = async (searchQuery: string, signal: AbortSignal) => {
     if (!searchQuery.trim()) {
       setResults([]);
+      setLoading(false);
       return;
     }
 
@@ -129,7 +130,7 @@ export default function TopSearchBar({
         searchQuery
       )}&addressdetails=1&polygon_geojson=1&extratags=1`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data: NominatimSearchItem[] = await res.json();
@@ -147,20 +148,26 @@ export default function TopSearchBar({
 
       setResults(formatted);
     } catch (error) {
+      if (signal.aborted) return; // superseded by a newer query
       console.error("Search failed:", error);
       setResults([]);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   };
 
-  // Handle search input changes
+  // Debounced search; each keystroke aborts the previous request so a slow,
+  // older response can't overwrite the results of a newer query
   useEffect(() => {
+    const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      performSearch(query);
+      performSearch(query, controller.signal);
     }, 300);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [query]);
 
   // Handle item selection
@@ -192,7 +199,7 @@ export default function TopSearchBar({
         searchRef.current &&
         !searchRef.current.contains(event.target as Node)
       ) {
-            setFocused(false);
+        setFocused(false);
       }
     };
 
@@ -202,7 +209,7 @@ export default function TopSearchBar({
         searchRef.current &&
         !searchRef.current.contains(event.target as Node)
       ) {
-            setFocused(false);
+        setFocused(false);
       }
     };
 
@@ -230,7 +237,7 @@ export default function TopSearchBar({
     >
       {/* Search Input */}
       <TextField
-        ref={inputRef}
+        inputRef={inputRef}
         fullWidth
         size="small"
         variant="outlined"
@@ -238,7 +245,6 @@ export default function TopSearchBar({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
         slotProps={{
           input: {
             startAdornment: (
