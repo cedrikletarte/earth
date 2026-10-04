@@ -79,7 +79,6 @@ export function useCesiumViewer(
       const skyAtmosphere = v.scene.skyAtmosphere;
 
       if (sceneMode === SceneMode.SCENE2D || sceneMode === SceneMode.COLUMBUS_VIEW) {
-        v.scene.primitives.removeAll();
         v.terrainProvider = new EllipsoidTerrainProvider();
         globe.enableLighting = false;
         globe.showGroundAtmosphere = false;
