@@ -30,6 +30,8 @@ type MapStyleDrawerProps = {
   onNightLightsChange: (enabled: boolean) => void;
   /** False in 2D/Columbus or with globe lighting off, where the overlay can't be drawn */
   nightLightsAvailable: boolean;
+  /** Extra sections rendered above the styles (e.g. natural events) */
+  children?: React.ReactNode;
 };
 
 const GROUP_TITLES: Record<MapStyle["group"], string> = {
@@ -48,6 +50,7 @@ export default function MapStyleDrawer({
   nightLights,
   onNightLightsChange,
   nightLightsAvailable,
+  children,
 }: MapStyleDrawerProps) {
   const [open, setOpen] = useState(false);
   const [maxNasaDate] = useState(defaultGibsDate);
@@ -119,6 +122,7 @@ export default function MapStyleDrawer({
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
+          {children}
           {(Object.keys(GROUP_TITLES) as MapStyle["group"][]).map((group) => (
             <Box key={group} sx={{ mb: 2 }}>
               <Typography variant="overline" color="textSecondary" sx={{ display: "block", fontWeight: "bold" }}>

@@ -24,6 +24,8 @@ export function useCesiumViewer(
       creditContainer: document.createElement("div"),
       baseLayer: false,
       baseLayerPicker: false,
+      // Selections are shown in our own MUI panels (e.g. EventInfoPanel)
+      infoBox: false,
       sceneModePicker: false,
       homeButton: false,
       navigationHelpButton: false,
