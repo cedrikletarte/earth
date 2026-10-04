@@ -1,6 +1,6 @@
 import { useRef, useCallback } from "react";
 import {
-  type Cartesian3,
+  Cartesian3,
   type PolygonHierarchy,
   type Viewer as ViewerType,
   GeoJsonDataSource,
@@ -41,7 +41,7 @@ export function useBoundaryOverlay(
 
             const addRing = (positions: Cartesian3[]) => {
               if (!positions || positions.length < 2) return;
-              const isClosed = positions[0] === positions[positions.length - 1];
+              const isClosed = Cartesian3.equals(positions[0], positions[positions.length - 1]);
               const ring = isClosed ? positions.slice() : [...positions, positions[0]];
               ds.entities.add({
                 polyline: {

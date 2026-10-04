@@ -6,6 +6,7 @@ import ViewInArIcon from "@mui/icons-material/ViewInAr"; // 3D
 import GridOnIcon from "@mui/icons-material/GridOn"; // 2D
 import ViewWeekIcon from "@mui/icons-material/ViewWeek"; // Columbus View (CV)
 import { useRightDockOffset } from "./rightDock";
+import { useSceneMode } from "../hooks/useSceneMode";
 
 type Props = {
   viewer: ViewerType | null;
@@ -49,25 +50,13 @@ const Btn = ({
 );
 
 export default function SceneModeSwitcher({ viewer }: Props) {
-  const [mode, setMode] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const rightOffset = useRightDockOffset();
   // Slower morph for smoother visual transition between modes (seconds)
   const morphDuration = 1.2;
 
-  // Track scene mode changes; before the first morph, read it straight from the viewer
-  useEffect(() => {
-    if (!viewer) return;
-    const update = () => setMode(viewer.scene.mode);
-    viewer.scene.morphComplete.addEventListener(update);
-    return () => {
-      try {
-        viewer.scene.morphComplete.removeEventListener(update);
-      } catch { /* ignore */ }
-    };
-  }, [viewer]);
-  const currentMode = mode ?? viewer?.scene.mode ?? null;
+  const currentMode = useSceneMode(viewer);
 
   const switchTo = (target: number) => {
     if (!viewer) return;

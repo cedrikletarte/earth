@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 import { SceneMode, type Viewer } from "cesium";
 import type { AtmosphereViewModel } from "./types";
+import { useSceneMode } from "../hooks/useSceneMode";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Tabs from "@mui/material/Tabs";
@@ -162,28 +163,8 @@ export default function AtmosphereControls({
   const [activeTab, setActiveTab] = useState<
     "globe" | "ground" | "sky" | "fog" | "scene"
   >("globe");
-  const [is3DMode, setIs3DMode] = useState(true);
-
-  // Check if we're in 3D mode
-  useEffect(() => {
-    if (!viewer) return;
-
-    const checkSceneMode = () => {
-      const sceneMode = viewer.scene.mode;
-      setIs3DMode(sceneMode === SceneMode.SCENE3D);
-    };
-
-    // Check initially
-    checkSceneMode();
-
-    // Listen for scene mode changes
-    const removeListener =
-      viewer.scene.morphComplete.addEventListener(checkSceneMode);
-
-    return () => {
-      if (removeListener) removeListener();
-    };
-  }, [viewer]);
+  const sceneMode = useSceneMode(viewer ?? null);
+  const is3DMode = sceneMode === null || sceneMode === SceneMode.SCENE3D;
 
   if (!viewModel) {
     return null;
