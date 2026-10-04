@@ -7,103 +7,61 @@ import {
   type Viewer as ViewerType
 } from "cesium";
 import type { AtmosphereViewModel } from "./types";
-import { getAtmosphereDefaults, createInitialViewModel } from "./utils";
+import { getAtmosphereDefaults, createInitialViewModel, FOG_DENSITY_UNIT } from "./utils";
 
 export function useAtmosphereControls(viewer: ViewerType | null) {
-  const [viewModel, setViewModel] = useState<AtmosphereViewModel | null>(null);
+  // The view model is the single source of truth; it is (re)built from Cesium's defaults whenever the viewer changes
+  const [state, setState] = useState<{ viewer: ViewerType; viewModel: AtmosphereViewModel } | null>(null);
+  if (viewer && state?.viewer !== viewer) {
+    setState({ viewer, viewModel: createInitialViewModel(getAtmosphereDefaults(viewer)) });
+  }
+  const viewModel = state && state.viewer === viewer ? state.viewModel : null;
 
-  // Initialize the view model when viewer is available
+  // Real-time clock (drives sun position) and keyboard focus for camera controls
   useEffect(() => {
     if (!viewer) return;
+    // eslint-disable-next-line react-hooks/immutability -- Cesium's Viewer is an imperative handle, not React data
+    viewer.clock.currentTime = JulianDate.now();
+    viewer.clock.multiplier = 1.0; // Real-time multiplier
+    viewer.clock.clockRange = ClockRange.UNBOUNDED;
+    viewer.clock.shouldAnimate = true;
 
-    // Add a small delay to ensure viewer is fully initialized
-    const initializeAtmosphere = () => {
-      try {
-        // Set up initial atmosphere settings
-        // eslint-disable-next-line react-hooks/immutability -- Cesium's Viewer is an imperative handle, not React data
-        const scene = viewer.scene;
-        const globe = scene.globe;
-
-        // Only apply atmosphere effects in 3D mode
-        if (scene.mode === SceneMode.SCENE3D) {
-          scene.highDynamicRange = true;
-          globe.enableLighting = true;
-          globe.atmosphereLightIntensity = 20.0;
-
-          // Enable dynamic lighting from the sun
-          globe.dynamicAtmosphereLighting = true;
-          globe.dynamicAtmosphereLightingFromSun = true;
-
-          // Enable atmosphere effects
-          globe.showGroundAtmosphere = true;
-          if (scene.skyAtmosphere) {
-            scene.skyAtmosphere.show = true;
-          }
-          scene.fog.enabled = true;
-        } else {
-          // Disable atmosphere effects in 2D/Columbus modes
-          scene.highDynamicRange = false;
-          globe.enableLighting = false;
-          globe.showGroundAtmosphere = false;
-          if (scene.skyAtmosphere) {
-            scene.skyAtmosphere.show = false;
-          }
-          scene.fog.enabled = false;
-        }
-
-        // Set up real-time clock
-        viewer.clock.currentTime = JulianDate.now();
-        viewer.clock.multiplier = 1.0; // Real-time multiplier
-        viewer.clock.clockRange = ClockRange.UNBOUNDED;
-        viewer.clock.shouldAnimate = true;
-
-        // Set up canvas focus
-        const canvas = viewer.canvas;
-        canvas.setAttribute("tabindex", "0");
-        canvas.onclick = function () {
-          canvas.focus();
-        };
-
-        // Get default values and create initial view model
-        const defaults = getAtmosphereDefaults(viewer);
-        const initialViewModel = createInitialViewModel(defaults);
-        setViewModel(initialViewModel);
-
-      } catch (error) {
-        console.warn("Failed to initialize atmosphere controls:", error);
-      }
-    };
-
-    // Initialize immediately, but also try again after a short delay if needed
-    initializeAtmosphere();
-
-    // Backup initialization after a small delay to ensure everything is ready
-    const timeoutId = setTimeout(initializeAtmosphere, 100);
-
-    return () => clearTimeout(timeoutId);
+    const canvas = viewer.canvas;
+    canvas.setAttribute("tabindex", "0");
+    canvas.onclick = () => canvas.focus();
   }, [viewer]);
+
+  // Push the view model to the scene, and again on every return to 3D
+  // (2D/Columbus morphs switch the effects off, see useCesiumViewer)
+  useEffect(() => {
+    if (!viewer || !viewModel) return;
+    applyViewModel(viewer, viewModel);
+    const onMorphComplete = () => {
+      if (viewer.scene.mode === SceneMode.SCENE3D) applyViewModel(viewer, viewModel);
+    };
+    viewer.scene.morphComplete.addEventListener(onMorphComplete);
+    return () => {
+      if (!viewer.isDestroyed()) viewer.scene.morphComplete.removeEventListener(onMorphComplete);
+    };
+  }, [viewer, viewModel]);
 
   const updateParameter = useCallback(<K extends keyof AtmosphereViewModel>(
     key: K,
     value: AtmosphereViewModel[K]
   ) => {
-    if (!viewer || !viewModel) return;
-
-    setViewModel(prev => {
-      if (!prev) return prev;
-      const newViewModel = { ...prev, [key]: value };
-
-      // Apply the change immediately to Cesium
-      applyParameterChange(viewer, key, value);
-
-      return newViewModel;
-    });
-  }, [viewer, viewModel]);
+    setState(prev => (prev ? { ...prev, viewModel: { ...prev.viewModel, [key]: value } } : prev));
+  }, []);
 
   return {
     viewModel,
     updateParameter,
   };
+}
+
+function applyViewModel(viewer: ViewerType, viewModel: AtmosphereViewModel) {
+  for (const key of Object.keys(viewModel) as (keyof AtmosphereViewModel)[]) {
+    applyParameterChange(viewer, key, viewModel[key]);
+  }
 }
 
 // Helper function to apply parameter changes to Cesium
@@ -145,7 +103,7 @@ function applyParameterChange<K extends keyof AtmosphereViewModel>(
       break;
 
     case "density":
-      scene.fog.density = 2.0e-4 * (value as number);
+      scene.fog.density = FOG_DENSITY_UNIT * (value as number);
       break;
 
     case "minimumBrightness":

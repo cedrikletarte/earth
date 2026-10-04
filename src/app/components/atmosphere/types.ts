@@ -70,4 +70,6 @@ export interface AtmosphereDefaults {
   skyAtmosphereHueShift: number;
   skyAtmosphereSaturationShift: number;
   skyAtmosphereBrightnessShift: number;
+  fogDensity: number;
+  fogMinimumBrightness: number;
 }

@@ -1,5 +1,8 @@
 import type { Viewer as ViewerType } from "cesium";
-import { AtmosphereDefaults } from "./types";
+import type { AtmosphereDefaults, AtmosphereViewModel } from "./types";
+
+/** The fog density slider is expressed in multiples of this value. */
+export const FOG_DENSITY_UNIT = 2.0e-4;
 
 /**
  * Gets the default atmosphere values from a Cesium viewer
@@ -52,13 +55,17 @@ export function getAtmosphereDefaults(viewer: ViewerType): AtmosphereDefaults {
     skyAtmosphereHueShift: skyAtmosphere.hueShift,
     skyAtmosphereSaturationShift: skyAtmosphere.saturationShift,
     skyAtmosphereBrightnessShift: skyAtmosphere.brightnessShift,
+    fogDensity: scene.fog.density,
+    fogMinimumBrightness: scene.fog.minimumBrightness,
   };
 }
 
 /**
- * Creates the initial atmosphere view model from defaults
+ * Creates the initial atmosphere view model: the app's 3D look (lighting,
+ * atmosphere, fog and HDR on) on top of Cesium's default coefficients.
+ * This is the single source of truth applied to the scene in 3D.
  */
-export function createInitialViewModel(defaults: AtmosphereDefaults) {
+export function createInitialViewModel(defaults: AtmosphereDefaults): AtmosphereViewModel {
   return {
     // Globe settings
     enableLighting: true,
@@ -66,7 +73,7 @@ export function createInitialViewModel(defaults: AtmosphereDefaults) {
 
     // Ground atmosphere settings
     showGroundAtmosphere: true,
-    groundAtmosphereLightIntensity: defaults.groundAtmosphereLightIntensity,
+    groundAtmosphereLightIntensity: 20.0, // brighter than Cesium's default
     groundAtmosphereRayleighCoefficientR: defaults.groundAtmosphereRayleighCoefficient.x / 1e-6,
     groundAtmosphereRayleighCoefficientG: defaults.groundAtmosphereRayleighCoefficient.y / 1e-6,
     groundAtmosphereRayleighCoefficientB: defaults.groundAtmosphereRayleighCoefficient.z / 1e-6,
@@ -97,12 +104,12 @@ export function createInitialViewModel(defaults: AtmosphereDefaults) {
     skyBrightnessShift: defaults.skyAtmosphereBrightnessShift,
     perFragmentAtmosphere: false,
     dynamicLighting: true,
-    dynamicLightingFromSun: false,
+    dynamicLightingFromSun: true,
 
     // Fog settings
     showFog: true,
-    density: 1.0,
-    minimumBrightness: 0.03,
+    density: defaults.fogDensity / FOG_DENSITY_UNIT,
+    minimumBrightness: defaults.fogMinimumBrightness,
 
     // Scene settings
     hdr: true,

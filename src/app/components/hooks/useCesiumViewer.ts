@@ -73,28 +73,17 @@ export function useCesiumViewer(
 
     v.scene.preRender.addEventListener(clampCamera2D);
 
+    // Atmosphere effects only make sense on the 3D globe; useAtmosphereControls restores them on return to 3D
     v.scene.morphComplete.addEventListener(() => {
       const sceneMode = v.scene.mode;
+      if (sceneMode !== SceneMode.SCENE2D && sceneMode !== SceneMode.COLUMBUS_VIEW) return;
       const globe = v.scene.globe;
-      const skyAtmosphere = v.scene.skyAtmosphere;
-
-      if (sceneMode === SceneMode.SCENE2D || sceneMode === SceneMode.COLUMBUS_VIEW) {
-        v.terrainProvider = new EllipsoidTerrainProvider();
-        globe.enableLighting = false;
-        globe.showGroundAtmosphere = false;
-        if (skyAtmosphere) skyAtmosphere.show = false;
-        v.scene.fog.enabled = false;
-        v.scene.highDynamicRange = false;
-      } else if (sceneMode === SceneMode.SCENE3D) {
-        globe.enableLighting = true;
-        globe.showGroundAtmosphere = true;
-        globe.atmosphereLightIntensity = 20.0;
-        globe.dynamicAtmosphereLighting = true;
-        globe.dynamicAtmosphereLightingFromSun = true;
-        if (skyAtmosphere) skyAtmosphere.show = true;
-        v.scene.fog.enabled = true;
-        v.scene.highDynamicRange = true;
-      }
+      v.terrainProvider = new EllipsoidTerrainProvider();
+      globe.enableLighting = false;
+      globe.showGroundAtmosphere = false;
+      if (v.scene.skyAtmosphere) v.scene.skyAtmosphere.show = false;
+      v.scene.fog.enabled = false;
+      v.scene.highDynamicRange = false;
     });
 
     return () => {
