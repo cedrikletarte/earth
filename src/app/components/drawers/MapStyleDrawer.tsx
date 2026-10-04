@@ -122,6 +122,7 @@ export default function MapStyleDrawer({
                   height={90}
                   rounded
                   selected={selectedKey === s.key}
+                  active={open}
                 />
                 <Box
                   sx={{

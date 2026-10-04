@@ -21,7 +21,106 @@ export type MiniViewerProps = {
   height: number;
   rounded?: boolean;
   selected?: boolean;
+  /** Sync with the main camera; false while hidden so idle thumbnails cost nothing per frame */
+  active: boolean;
 };
+
+function computeSafeViewRectangle(v: ViewerType): Rectangle | undefined {
+  const scene = v.scene;
+  const ellipsoid = scene.globe?.ellipsoid;
+  if (!ellipsoid) return undefined;
+  const canvas = scene.canvas;
+  const w = canvas.clientWidth || canvas.width;
+  const h = canvas.clientHeight || canvas.height;
+  const pts = [
+    new Cartesian2(0, 0),
+    new Cartesian2(w, 0),
+    new Cartesian2(w, h),
+    new Cartesian2(0, h),
+    new Cartesian2(w * 0.5, h * 0.5),
+  ];
+  const lons: number[] = [];
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+  let found = false;
+  for (const p of pts) {
+    const cart = scene.camera.pickEllipsoid(p, ellipsoid);
+    if (cart) {
+      const c = Cartographic.fromCartesian(cart);
+      const maxLatR = WebMercatorProjection.MaximumLatitude;
+      const lat = CesiumMath.clamp(c.latitude, -maxLatR, maxLatR);
+      lons.push(CesiumMath.negativePiToPi(c.longitude));
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
+      found = true;
+    }
+  }
+  if (!found) return undefined;
+
+  let minLon: number, maxLon: number;
+  const aMin = Math.min(...lons);
+  const aMax = Math.max(...lons);
+  const ref = lons[0];
+  const twoPi = Math.PI * 2;
+  const norm = lons.map((L) => {
+    let d = L - ref;
+    if (d > Math.PI) d -= twoPi;
+    if (d < -Math.PI) d += twoPi;
+    return ref + d;
+  });
+  const bMin = Math.min(...norm);
+  const bMax = Math.max(...norm);
+  if (bMax - bMin < aMax - aMin) {
+    minLon = CesiumMath.negativePiToPi(bMin);
+    maxLon = CesiumMath.negativePiToPi(bMax);
+    if (minLon > maxLon) [minLon, maxLon] = [maxLon, minLon];
+  } else {
+    minLon = aMin;
+    maxLon = aMax;
+  }
+
+  const eps = 1e-6;
+  return new Rectangle(
+    minLon - (maxLon - minLon < eps ? eps : 0),
+    minLat - (maxLat - minLat < eps ? eps : 0),
+    maxLon + (maxLon - minLon < eps ? eps : 0),
+    maxLat + (maxLat - minLat < eps ? eps : 0)
+  );
+}
+
+function syncMiniToMain(mini: ViewerType, mainViewer: ViewerType) {
+  if (mini.isDestroyed()) return;
+  const mainCam = mainViewer.camera;
+  const miniCam = mini.camera;
+
+  if (mini.scene.mode !== mainViewer.scene.mode) {
+    if (mainViewer.scene.mode === SceneMode.SCENE3D) mini.scene.morphTo3D(0.0);
+    else if (mainViewer.scene.mode === SceneMode.SCENE2D) mini.scene.morphTo2D(0.0);
+    else if (mainViewer.scene.mode === SceneMode.COLUMBUS_VIEW) mini.scene.morphToColumbusView(0.0);
+  }
+
+  const mode = mainViewer.scene.mode;
+  if (mode === SceneMode.SCENE2D || mode === SceneMode.COLUMBUS_VIEW) {
+    const rect = computeSafeViewRectangle(mainViewer);
+    if (rect) {
+      try { miniCam.setView({ destination: rect }); } catch { /* ignore */ }
+    } else {
+      miniCam.setView({ destination: mainCam.position, orientation: { direction: mainCam.direction, up: mainCam.up } });
+    }
+  } else {
+    miniCam.setView({ destination: mainCam.position, orientation: { direction: mainCam.direction, up: mainCam.up } });
+    const mainFrustum = mainCam.frustum;
+    const miniFrustum = miniCam.frustum;
+    if (
+      mainFrustum instanceof PerspectiveFrustum &&
+      miniFrustum instanceof PerspectiveFrustum &&
+      typeof mainFrustum.fov === "number"
+    ) {
+      miniFrustum.fov = mainFrustum.fov;
+    }
+  }
+  mini.scene.requestRender();
+}
 
 export default function MiniViewer({
   mainViewer,
@@ -30,10 +129,10 @@ export default function MiniViewer({
   height,
   rounded,
   selected,
+  active,
 }: MiniViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const miniRef = useRef<ViewerType | null>(null);
-  const syncHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -83,118 +182,18 @@ export default function MiniViewer({
       } catch { /* ignore */ }
     }
 
-    const mini = miniRef.current!;
-
-    const computeSafeViewRectangle = (v: ViewerType): Rectangle | undefined => {
-      const scene = v.scene;
-      const ellipsoid = scene.globe?.ellipsoid;
-      if (!ellipsoid) return undefined;
-      const canvas = scene.canvas;
-      const w = canvas.clientWidth || canvas.width;
-      const h = canvas.clientHeight || canvas.height;
-      const pts = [
-        new Cartesian2(0, 0),
-        new Cartesian2(w, 0),
-        new Cartesian2(w, h),
-        new Cartesian2(0, h),
-        new Cartesian2(w * 0.5, h * 0.5),
-      ];
-      const lons: number[] = [];
-      let minLat = Infinity;
-      let maxLat = -Infinity;
-      let found = false;
-      for (const p of pts) {
-        const cart = scene.camera.pickEllipsoid(p, ellipsoid);
-        if (cart) {
-          const c = Cartographic.fromCartesian(cart);
-          const maxLatR = WebMercatorProjection.MaximumLatitude;
-          const lat = CesiumMath.clamp(c.latitude, -maxLatR, maxLatR);
-          lons.push(CesiumMath.negativePiToPi(c.longitude));
-          minLat = Math.min(minLat, lat);
-          maxLat = Math.max(maxLat, lat);
-          found = true;
-        }
-      }
-      if (!found) return undefined;
-
-      let minLon: number, maxLon: number;
-      const aMin = Math.min(...lons);
-      const aMax = Math.max(...lons);
-      const ref = lons[0];
-      const twoPi = Math.PI * 2;
-      const norm = lons.map((L) => {
-        let d = L - ref;
-        if (d > Math.PI) d -= twoPi;
-        if (d < -Math.PI) d += twoPi;
-        return ref + d;
-      });
-      const bMin = Math.min(...norm);
-      const bMax = Math.max(...norm);
-      if (bMax - bMin < aMax - aMin) {
-        minLon = CesiumMath.negativePiToPi(bMin);
-        maxLon = CesiumMath.negativePiToPi(bMax);
-        if (minLon > maxLon) [minLon, maxLon] = [maxLon, minLon];
-      } else {
-        minLon = aMin;
-        maxLon = aMax;
-      }
-
-      const eps = 1e-6;
-      return new Rectangle(
-        minLon - (maxLon - minLon < eps ? eps : 0),
-        minLat - (maxLat - minLat < eps ? eps : 0),
-        maxLon + (maxLon - minLon < eps ? eps : 0),
-        maxLat + (maxLat - minLat < eps ? eps : 0)
-      );
-    };
-
-    const sync = () => {
-      if (mini.isDestroyed()) return;
-      const mainCam = mainViewer.camera;
-      const miniCam = mini.camera;
-
-      if (mini.scene.mode !== mainViewer.scene.mode) {
-        if (mainViewer.scene.mode === SceneMode.SCENE3D) mini.scene.morphTo3D(0.0);
-        else if (mainViewer.scene.mode === SceneMode.SCENE2D) mini.scene.morphTo2D(0.0);
-        else if (mainViewer.scene.mode === SceneMode.COLUMBUS_VIEW) mini.scene.morphToColumbusView(0.0);
-      }
-
-      const mode = mainViewer.scene.mode;
-      if (mode === SceneMode.SCENE2D || mode === SceneMode.COLUMBUS_VIEW) {
-        const rect = computeSafeViewRectangle(mainViewer);
-        if (rect) {
-          try { miniCam.setView({ destination: rect }); } catch { /* ignore */ }
-        } else {
-          miniCam.setView({ destination: mainCam.position, orientation: { direction: mainCam.direction, up: mainCam.up } });
-        }
-      } else {
-        miniCam.setView({ destination: mainCam.position, orientation: { direction: mainCam.direction, up: mainCam.up } });
-        const mainFrustum = mainCam.frustum;
-        const miniFrustum = miniCam.frustum;
-        if (
-          mainFrustum instanceof PerspectiveFrustum &&
-          miniFrustum instanceof PerspectiveFrustum &&
-          typeof mainFrustum.fov === "number"
-        ) {
-          miniFrustum.fov = mainFrustum.fov;
-        }
-      }
-      mini.scene.requestRender();
-    };
-
-    if (syncHandlerRef.current) {
-      mainViewer.scene.preRender.removeEventListener(syncHandlerRef.current);
-    }
-    mainViewer.scene.preRender.addEventListener(sync);
-    syncHandlerRef.current = sync;
-
-    return () => {
-      if (syncHandlerRef.current) {
-        mainViewer.scene.preRender.removeEventListener(syncHandlerRef.current);
-        syncHandlerRef.current = null;
-      }
-    };
   }, [mainViewer, createProvider]);
+
+  // Follow the main camera only while visible: every sync re-renders this mini globe
+  useEffect(() => {
+    const mini = miniRef.current;
+    if (!active || !mainViewer || !mini || mini.isDestroyed()) return;
+    const sync = () => syncMiniToMain(mini, mainViewer);
+    mainViewer.scene.preRender.addEventListener(sync);
+    return () => {
+      if (!mainViewer.isDestroyed()) mainViewer.scene.preRender.removeEventListener(sync);
+    };
+  }, [active, mainViewer]);
 
   useEffect(() => {
     return () => {
