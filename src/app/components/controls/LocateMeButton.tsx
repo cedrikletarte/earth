@@ -1,6 +1,4 @@
-"use client";
-
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
 import Snackbar from "@mui/material/Snackbar";
@@ -21,7 +19,6 @@ type Props = {
 };
 
 export default function LocateMeButton({ viewer }: Props) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
   const rightOffset = useRightDockOffset();
   const [locating, setLocating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -175,7 +172,6 @@ export default function LocateMeButton({ viewer }: Props) {
   return (
     <>
       <Box
-        ref={rootRef}
         sx={{
           position: "fixed",
           right: rightOffset,

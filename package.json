@@ -14,11 +14,9 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^9.4.0",
     "@mui/material": "^9.4.0",
-    "@tailwindcss/vite": "^4.3.3",
     "cesium": "^1.146.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "tailwindcss": "^4.3.3",
     "vite-plugin-cesium": "^1.2.23"
   },
   "devDependencies": {

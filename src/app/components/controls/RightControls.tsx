@@ -1,5 +1,3 @@
-"use client";
-
 import { type Viewer as ViewerType } from "cesium";
 import SceneModeSwitcher from "./SceneModeSwitcher";
 import LocateMeButton from "./LocateMeButton";
@@ -9,7 +7,7 @@ import { RightDockProvider } from "./RightDockContext";
 type Props = { viewer: ViewerType | null; children?: React.ReactNode };
 
 export default function RightControls({ viewer, children }: Props) {
-  // Provide the right offset context and render controls + any children that need it (e.g., MapStyleSwitcher)
+  // Provide the right offset context and render controls + any children that need it (e.g., MapStyleDrawer)
   return (
     <RightDockProvider>
       <SceneModeSwitcher viewer={viewer} />

@@ -3,7 +3,6 @@ services:
     build:
       context: .
       args:
-        VITE_CESIUM_ION_TOKEN: ${VITE_CESIUM_ION_TOKEN}
         VITE_TILESERVER_URL: ${VITE_TILESERVER_URL}
         VITE_NOMINATIM_BASE_URL: ${VITE_NOMINATIM_BASE_URL}
     ports:

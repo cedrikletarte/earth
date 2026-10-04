@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useContext, useState, useEffect } from "react";
 import { SceneMode, type Viewer } from "cesium";
 import type { AtmosphereViewModel } from "./types";

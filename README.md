@@ -24,7 +24,6 @@ cp .env.example .env
 
 | Variable | Description |
 |---|---|
-| `VITE_CESIUM_ION_TOKEN` | [Cesium Ion](https://cesium.com/platform/account/tokens) access token |
 | `VITE_TILESERVER_URL` | TileServer-GL base URL (e.g. `http://localhost:8085`) |
 | `VITE_NOMINATIM_BASE_URL` | Nominatim base URL (e.g. `http://localhost:8086`) |
 

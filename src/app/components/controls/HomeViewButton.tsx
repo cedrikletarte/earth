@@ -1,6 +1,3 @@
-"use client";
-
-import { useRef } from "react";
 import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
@@ -12,7 +9,6 @@ type Props = {
 };
 
 export default function HomeViewButton({ viewer }: Props) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
   const rightOffset = useRightDockOffset();
 
   const flyHome = () => {
@@ -24,7 +20,6 @@ export default function HomeViewButton({ viewer }: Props) {
 
   return (
     <Box
-      ref={rootRef}
       sx={{
         position: "fixed",
         right: rightOffset,
