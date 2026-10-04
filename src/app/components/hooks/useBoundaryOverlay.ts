@@ -15,9 +15,11 @@ export function useBoundaryOverlay(
   viewerRef: React.RefObject<ViewerType | null>
 ) {
   const boundaryDsRef = useRef<GeoJsonDataSource | null>(null);
+  // Incremented on every drawBoundary call so stale fetches/loads can bail out
+  const requestIdRef = useRef(0);
 
   const applyStyle = useCallback(
-    async (label: string, geojson: PlaceGeometry) => {
+    async (label: string, geojson: PlaceGeometry, requestId: number) => {
       const viewer = viewerRef.current;
       if (!viewer) return;
       try {
@@ -25,6 +27,7 @@ export function useBoundaryOverlay(
           { type: "Feature", geometry: geojson, properties: { name: label } },
           { clampToGround: true }
         );
+        if (requestId !== requestIdRef.current || viewer.isDestroyed()) return;
         boundaryDsRef.current = ds;
         viewer.dataSources.add(ds);
 
@@ -88,6 +91,7 @@ export function useBoundaryOverlay(
     ) => {
       const viewer = viewerRef.current;
       if (!viewer) return;
+      const requestId = ++requestIdRef.current;
 
       if (boundaryDsRef.current) {
         viewer.dataSources.remove(boundaryDsRef.current, true);
@@ -95,7 +99,7 @@ export function useBoundaryOverlay(
       }
 
       if (geometry) {
-        await applyStyle(label, geometry);
+        await applyStyle(label, geometry, requestId);
       } else if (osmType && osmId) {
         try {
           const base = import.meta.env.VITE_NOMINATIM_BASE_URL;
@@ -104,7 +108,7 @@ export function useBoundaryOverlay(
           if (res.ok) {
             const json: NominatimDetails = await res.json();
             const geom = json?.geometry ?? json?.geojson;
-            if (geom) await applyStyle(label, geom);
+            if (geom) await applyStyle(label, geom, requestId);
           }
         } catch (e) {
           console.warn("Failed to fetch boundary:", e);
